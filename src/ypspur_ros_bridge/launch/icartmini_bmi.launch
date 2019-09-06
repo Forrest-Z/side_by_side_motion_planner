@@ -1,0 +1,176 @@
+<launch>
+	<!-- ARGUMENTS -->
+	<arg name="use_safety" default="true"/>
+	<arg name="use_localization" default="true"/>
+	<arg name="use_initial_pose" default="false"/>
+	<arg name="enable_control" default="true"/>
+	<arg name="use_log" default="false"/>
+	<arg name="unlink_sensor_link" default="false"/>
+	<arg name="use_simulator" default="false" />
+	<arg name="tf_prefix" default="" />
+	<arg name="remap_scan_topic" default="false"/>
+	<arg name="port" default="/dev/actuators/tfrog" />		
+	<arg name="port_lrf" default="/dev/sensors/hokuyo_H1514506" />
+
+	<!-- Trajectory Tracker -->
+	<arg name="use_trajectory_tracker" default="false"/>
+	<arg name="max_vel" default="0.7"  />
+	<arg name="max_angvel" default="1.0"  />
+	<arg name="max_acc" default="1.0"  />
+	<arg name="max_angacc" default="1.0"  />
+	<arg name="rotate_ang" default="0.5"  />
+	<arg name="limit_vel_by_avel" default="true" />
+
+	<rosparam param="footprint" ns="move_base/local_costmap">[[0.12, -0.2], [0.12, 0.2], [-0.32, 0.2], [-0.32, -0.2]]</rosparam>
+	<rosparam param="footprint" ns="move_base/global_costmap/">[[0.12, -0.2], [0.12, 0.2], [-0.32, 0.2], [-0.32, -0.2]]</rosparam>
+	<rosparam param="footprint" ns="limiter">[[0.12, -0.2], [0.12, 0.2], [-0.32, 0.2], [-0.32, -0.2]]</rosparam>
+
+	<node pkg="tf" type="static_transform_publisher" name="stf1" args="0.03 0 0.21 0 0 0 sensor_link laser 100" />
+	<node pkg="tf" type="static_transform_publisher" name="slink" args="0 0 0 0 0 0 base_link sensor_link 100" unless="$(arg unlink_sensor_link)" />
+
+	<group unless="$(arg use_simulator)">
+		<node pkg="tf" type="static_transform_publisher" name="stf2" args="-0.02 0.11 1.0 3.14 0.025 1.57 sensor_link velodyne 100"/>
+		
+		<node pkg="tf" type="static_transform_publisher" name="stf3" args="-0.02 -0.06 0.98 0.04 0.559 1.57 sensor_link camera2_link 100"/>
+		<node pkg="tf" type="static_transform_publisher" name="stf5" args="0.03 0.08 1.07 -0.02 0.824 -0.035 sensor_link camera3_link 100" />
+		<node pkg="tf" type="static_transform_publisher" name="stf6" args="0.01 0.02 1.1 0.05 0.23 0.015 sensor_link hokuyo3d 100" />
+		
+
+
+		<!-- LRF -->
+	   	<node name="urg_node" pkg="urg_node" type="urg_node" unless="$(arg use_log)">
+			<param name="serial_port" value="$(arg port_lrf)" type="string" />
+			<param name="frame_id" type="string" value="laser" />
+			<param name="angle_min" value="-2.0" />
+			<param name="angle_max" value="2.0" />
+			<param name="calibrate_time" type="bool" value="true" />
+			<remap from="/scan" to="/scan_orig0" />
+		</node>
+		
+		<!-- DRIVER -->
+		<node pkg="ypspur_ros_bridge" type="RosYPSpur" name="ypspur_driver" respawn="true" unless="$(arg use_log)">
+			<param name="port"   value="$(arg port)" type="string" /> 
+			<param name="vel"    value="1.0" type="double" /> 
+			<param name="angvel" value="1.0" type="double" /> 
+			<param name="acc"    value="0.7" type="double" /> 
+			<param name="angacc" value="1.5" type="double" /> 
+			<param name="hz" value="50.0" type="double" /> 
+			<param name="origin_id" value="" type="string" />
+			<remap from="/driver/odom" to="/odom" />
+			<remap from="/driver/cmd_vel" to="/aaaa" unless="$(arg enable_control)" />
+			<param name="ad_enable7" value="true" type="bool" />
+			<param name="ad_gain7" value="0.041894531" type="double" />
+			<param name="ad_offset7" value="0.0" type="double" />
+		</node>
+		
+		<!-- LOCALIZATION -->
+		<group if="$(arg use_localization)">
+			<group if="$(arg use_initial_pose)">
+				<rosparam param="initial_pose_x" ns="amcl">0</rosparam>
+				<rosparam param="initial_pose_y" ns="amcl">0</rosparam>
+				<rosparam param="initial_pose_a" ns="amcl">0</rosparam>
+			</group>
+			<node name="amcl" pkg="amcl" type="amcl">
+				<param name="odom_alpha1" type="double" value="4" />
+				<param name="odom_alpha2" type="double" value="4" />
+				<param name="odom_alpha3" type="double" value="2" />
+				<param name="odom_alpha4" type="double" value="2" />
+				<param name="laser_max_beams" type="int" value="200" />
+				<param name="update_min_d" type="double" value="0.05" />
+				<param name="update_min_a" type="double" value="0.08" />
+				<param name="use_map_topic" type="bool" value="true" />
+				<param name="laser_model_type" type="string" value="beam" />
+				<param name="min_particles" type="int" value="30" />
+				<param name="max_particles" type="int" value="100" />
+				<param name="laser_likelihood_max_dist" type="double" value="0.5" />
+			</node>
+		</group>
+	</group>
+
+	<group if="$(arg use_simulator)">
+		<group if="$(arg use_initial_pose)">
+			<rosparam param="delta_x" ns="amcl">0</rosparam>
+			<rosparam param="delta_y" ns="amcl">0</rosparam>
+			<rosparam param="delta_yaw" ns="amcl">0</rosparam>
+		</group>
+
+		<!-- LAUNCH SIMULATOR -->
+		<include file="$(find simple_simulator)/launch/icartmini.launch" >
+			<arg name="use_localization" value="$(arg use_localization)" />
+			<arg name="remap_scan_topic" value="true" />
+			<arg name="scan_topic" value="/scan_orig0" />
+		</include>
+
+	<!-- UTM SIMULATOR -->
+	<node pkg="simple_simulator" type="utm_simulator" name="simulator_hokuyo">
+		<param name="frame_id" type="string" value="$(arg tf_prefix)/laser" />
+		<remap from="~/scan" to="$(arg scan_topic)" if="$(arg remap_scan_topic)"/>
+	</node>
+
+	</group>
+
+
+
+	
+	<node name="unify" pkg="laser_preprocess" type="uni_density">
+		<param name="scan" value="/scan_orig" type="string" />
+		<param name="uscan" value="/scan" type="string" />
+		<param name="cull_dist" value="0.05" type="double" />
+		<param name="mixed_dist" value="0.15" type="double" />
+	</node>
+	<node pkg="laser_filters" type="scan_to_scan_filter_chain" output="screen" name="laser_filter">
+		<remap from="scan" to="/scan_orig0" />
+		<remap from="scan_filtered" to="/scan_orig" />
+		<rosparam command="load" file="$(find ypspur_ros_bridge)/config/shadow_filter.yaml" />
+	</node>
+
+
+	<!-- LAUNCH SAFETY LIMITER -->
+	<include file="$(find safety_limiter)/launch/safety_limiter.launch" if="$(arg use_safety)">
+		<arg name="cmd_vel" value="/limiter/cmd_vel" />
+		<arg name="cloud" value="/limiter/cloud" />
+		<arg name="odom" value="/odom" />
+		<arg name="cmd_vel_out" value="/ypspur_driver/cmd_vel" /> 
+		<arg name="lin_acc" value="0.6" />
+		<arg name="ang_acc" value="0.7" />
+		<arg name="lin_margin" value="0.15" />
+		<arg name="ang_margin" value="0.1" />
+		<arg name="lin_esc_margin" value="0.15" />
+		<arg name="ang_esc_margin" value="0.3" />
+		<arg name="unify_scan" value="true" />
+	</include>
+
+
+
+
+
+	<group if="$(arg use_trajectory_tracker)">
+	<node pkg="trajectory_tracker" type="trajectory_tracker" name="trajectory_Tracker" output="screen">
+		<param name="cmd_vel" value="/cmd_vel_mux/path_controller" type="string" />
+		<param name="path" value="/plan" type="string" />
+		<param name="path_step" value="1" type="int" />
+
+
+		<param name="max_vel"    value="0.7"  />
+		<param name="max_steering" value="0.6"   />
+		<param name="max_acc"    value="0.9"   />
+		<param name="max_angacc" value="1.5"   />
+		<param name="rotate_ang" value="0.5"  />
+
+
+		<param name="curv_forward" value="1.1" type="double" />
+		<param name="look_forward" value="0.8" type="double" />
+		<param name="k_dist" value="8" type="double" />
+		<param name="k_ang" value="12" type="double" />
+		<param name="k_avel" value="9" type="double" />
+		<param name="dist_lim" value="0.3" type="double" />
+		<param name="distance_angle_factor" value="0.5" type="double" />
+		<param name="goal_tolerance_dist" value="0.3" type="double" />
+		<param name="goal_tolerance_ang" value="0.15" type="double" />
+		<param name="allow_backward" value="false" type="bool" />
+		<param name="dist_stop" value="5.3" type="double" />
+
+	</node>
+	</group>
+
+</launch>

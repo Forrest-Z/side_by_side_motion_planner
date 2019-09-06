@@ -1,0 +1,29 @@
+<launch>   
+	<arg name="separate_scans" default="false" />
+	<arg name="tf_prefix" default="" />
+	
+	<node pkg="simple_simulator" type="odo_simulator" name="driver">
+		<param name="odom_frame_id" type="string" value="$(arg tf_prefix)/odom" />
+		<param name="base_frame_id" type="string" value="$(arg tf_prefix)/base_link" />
+		<remap from="driver/base_pose_ground_truth" to="base_pose_ground_truth" />
+		<remap from="driver/cmd_vel" to="cmd_vel" />	
+	</node>
+
+	<node pkg="fake_localization" type="fake_localization" name="amcl" >
+		<param name="odom_frame_id" type="string" value="$(arg tf_prefix)/odom" />
+		<param name="base_frame_id" type="string" value="$(arg tf_prefix)/base_link" />
+	</node>
+
+	<node pkg="simple_simulator" type="utm_simulator" name="hokuyo_right">
+		<param name="frame_id" type="string" value="$(arg tf_prefix)/laser_right" />
+		<remap from="hokuyo_right/scan" to="scan_right" if="$(arg separate_scans)" />
+		<remap from="hokuyo_right/scan" to="scan" unless="$(arg separate_scans)" />
+	</node>
+
+	<node pkg="simple_simulator" type="utm_simulator" name="hokuyo_left">
+		<param name="frame_id" type="string" value="$(arg tf_prefix)/laser_left" />
+		<remap from="hokuyo_left/scan" to="scan_left" if="$(arg separate_scans)" />
+		<remap from="hokuyo_left/scan" to="scan" unless="$(arg separate_scans)" />
+	</node>
+
+</launch>

@@ -1,0 +1,42 @@
+<launch>
+	<arg name="tf_prefix" default="" />
+	<arg name="use_localization" default="true"/>
+	<arg name="remap_scan_topic" default="false"/>
+	<arg name="scan_topic" default="/scan"/>
+	<arg name="delta_x" default="0" />
+	<arg name="delta_y" default="0" />
+	<arg name="delta_yaw" default="0" />
+	<arg name="initialPoseX" default="0.0"/>
+	<arg name="initialPoseY" default="0.0"/>
+	<arg name="initialPoseTheta" default="0.0"/>
+	
+
+	<node pkg="simple_simulator" type="odo_simulator" name="odo_simple_simulator">
+		<param name="odom_frame_id" type="string" value="$(arg tf_prefix)/odom" />
+		<param name="base_frame_id" type="string" value="$(arg tf_prefix)/base_link" />
+		<param name="initialPoseX" type="double" value="$(arg initialPoseX)"/>
+		<param name="initialPoseY" type="double" value="$(arg initialPoseY)"/>
+		<param name="initialPoseTheta" type="double" value="$(arg initialPoseTheta)"/>
+		<remap from="~/base_pose_ground_truth" to="/odom" />
+
+af
+
+		<param name="cmd_vel" type="string" value="/ypspur_driver/cmd_vel" />
+	</node>
+
+	<node pkg="fake_localization" type="fake_localization" name="amcl" if="$(arg use_localization)">
+		<param name="odom_frame_id" type="string" value="$(arg tf_prefix)/odom" />
+		<param name="base_frame_id" type="string" value="$(arg tf_prefix)/base_link" />
+			<rosparam param="delta_x" ns="amcl">delta_x</rosparam>
+			<rosparam param="delta_y" ns="amcl">delta_y</rosparam>
+			<rosparam param="delta_yaw" ns="amcl">delta_yaw</rosparam>
+
+		<remap from="/base_pose_ground_truth" to="/odom" />
+	</node>
+
+	<node pkg="simple_simulator" type="utm_simulator" name="hokuyo">
+		<param name="frame_id" type="string" value="$(arg tf_prefix)/laser" />
+		<remap from="~/scan" to="$(arg scan_topic)" if="$(arg remap_scan_topic)"/>
+	</node>
+
+</launch>

@@ -1,0 +1,51 @@
+<launch> 
+	<!-- ARGUMENTS -->
+	<arg name="robot" />
+	<arg name="port" default="/dev/actuators/tfrog" />
+	<arg name="map_file" default="/home/$(env USER)/Dropbox/Research/cmob_auto/ros/environments/coi_7th_floor/coi_7th_floor.yaml" />
+	<arg name="use_safety" default="true" />
+	<arg name="use_joystick" default="true" />
+	<arg name="joystick" default="wiimote" />
+	
+	<!-- LAUNCH BASE DRIVERS -->
+	<include file="/home/$(env USER)/Dropbox/Research/cmob_auto/ros/robots/$(arg robot).launch">
+		<arg name="use_safety" value="$(arg use_safety)" />
+		<arg name="port" value="$(arg port)" />
+	</include>
+	
+	<!-- PUBLISH MAP -->
+	<node respawn="true" name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)"/> 
+
+	<!-- FIRE UP PLANNER -->
+	<node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+		<rosparam file="$(find ypspur_ros_bridge)/config/move_base_params.yaml" command="load" />
+    		<rosparam file="$(find ypspur_ros_bridge)/config/costmap_common_params.yaml" command="load" ns="global_costmap" />
+    		<rosparam file="$(find ypspur_ros_bridge)/config/costmap_common_params.yaml" command="load" ns="local_costmap" />
+    		<rosparam file="$(find ypspur_ros_bridge)/config/local_costmap_params.yaml" command="load" />
+		<rosparam file="$(find ypspur_ros_bridge)/config/global_costmap_params.yaml" command="load" />
+		<rosparam file="$(find ypspur_ros_bridge)/config/base_local_planner_params.yaml" command="load" />
+		<rosparam file="$(find ypspur_ros_bridge)/config/navfn_params.yaml" command="load" />
+		<remap from="/cmd_vel" to="/cmd_vel_mux/path_controller" />
+	</node>
+		
+	<!-- JOYSTICK -->
+	<include file="$(find joystick_teleop)/launch/$(arg joystick).launch" if="$(arg use_joystick)">
+		<arg name="max_linear_vel" value="1.0" />
+		<arg name="max_angular_vel" value="0.5" />
+		<arg name="cmd_vel_out" value="/cmd_vel_mux/joystick_controller" />
+	</include>
+
+  	<node pkg="nodelet" type="nodelet" name="base_nodelet_manager" args="manager" />
+
+	<!-- VELOCITY COMMAND MULTIPLEXER -->
+	<node pkg="nodelet" type="nodelet" name="cmd_vel_mux" args="load yocs_cmd_vel_mux/CmdVelMuxNodelet base_nodelet_manager" >
+    		<param name="yaml_cfg_file" value="$(find ypspur_ros_bridge)/config/cmd_mux_config.yaml" />
+    		<remap from="cmd_vel_mux/output" to="/limiter/cmd_vel" if="$(arg use_safety)" />
+	    	<remap from="output" to="/limiter/cmd_vel" if="$(arg use_safety)" />
+	    	<remap from="cmd_vel_mux/output" to="/driver/cmd_vel" unless="$(arg use_safety)" />
+		<remap from="output" to="/driver/cmd_vel" unless="$(arg use_safety)" />
+    	</node>
+	
+	<!-- VISUALIZER -->
+	<node pkg="rviz" type="rviz" args="-d '$(find ypspur_ros_bridge)/launch/rviz/nav_visu.rviz'" name="visualizer" />
+</launch>

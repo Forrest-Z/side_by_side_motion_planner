@@ -1,0 +1,22 @@
+timeMinSec: 1.0
+timeMaxSec: 1.5
+timeDeltaSec: 0.5
+
+desiredSpeed: 2.9
+desiredSpeedPlus: 0.0
+desiredSpeedMinus: -0.5
+desiredSpeedDelta: 0.25
+
+desiredLatPosition: 0.0
+desiredLatPositionPlus: 0.4
+desiredLatPositionMinus: -0.4
+desiredLatPositionDelta: 0.1
+
+arcLengthTickMeter: 0.4 
+roadMarginLeft: 0.5
+roadMarginRight: 0.5 
+maxCentrifugalForce: 1.5 
+maxAcceleration: 1.0 
+maxCurvature: 17.5 
+
+polyTickTime: 0.12

@@ -1,0 +1,6 @@
+<launch>
+  <node pkg="udp" type="odom_in_map_server.py" name="udp_odom_server" ns="/v1"/>
+    <node pkg="udp" type="pose_in_map_server.py" name="udp_pose_server" ns="/v1"/>
+
+
+</launch>

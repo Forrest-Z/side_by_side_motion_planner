@@ -1,0 +1,9 @@
+grid_map_topic: /grid_map
+
+grid_map_visualizations:
+- name: traversability_grid
+  type: occupancy_grid
+  params:
+   layer: utility
+   data_min: 0.7
+   data_max: 1

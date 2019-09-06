@@ -1,0 +1,71 @@
+<launch>
+	<!-- ARGUMENTS -->
+	<arg name="use_safety" default="true"/>
+	<arg name="use_localization" default="true"/>
+	<arg name="use_initial_pose" default="true"/>
+	<arg name="enable_control" default="true"/>
+
+	<rosparam param="footprint" ns="move_base/local_costmap">[[0.12, -0.2], [0.12, 0.2], [-0.35, 0.2], [-0.35, -0.2]]</rosparam>
+	<rosparam param="footprint" ns="move_base/global_costmap/">[[0.12, -0.2], [0.12, 0.2], [-0.35, 0.2], [-0.35, -0.2]]</rosparam>
+	<rosparam param="footprint" ns="limiter">[[0.12, -0.2], [0.12, 0.2], [-0.35, 0.2], [-0.35, -0.2]]</rosparam>
+
+	<node pkg="tf" type="static_transform_publisher" name="tf" args="0.085 0 0.24 0 0 0 base_link laser 20" />
+
+	<arg name="port" default="/dev/actuators/tfrog" />
+	<arg name="port_lrf" default="/dev/sensors/hokuyo_H1109391" />
+
+	<!-- LRF -->
+    	<node name="urg_node" pkg="urg_node" type="urg_node">
+		<param name="serial_port" value="$(arg port_lrf)" type="string" />
+		<param name="frame_id" type="string" value="laser" />
+		<param name="calibrate_time" type="bool" value="true" />
+	</node>
+
+	<!-- DRIVER -->
+	<node pkg="ypspur_ros_bridge" type="RosYPSpur" name="driver" respawn="true">
+		<param name="port"   value="$(arg port)" type="string" /> 
+		<param name="vel"    value="2.0" type="double" /> 
+		<param name="angvel" value="0.8" type="double" /> 
+		<param name="acc"    value="0.8" type="double" /> 
+		<param name="angacc" value="1.0" type="double" /> 
+		<param name="hz"     value="50" type="double" /> 
+		<param name="origin_id" value="map" type="string" />
+		<remap from="/driver/odom" to="/odom" />
+		<remap from="/driver/cmd_vel" to="/aaaa" unless="$(arg enable_control)" />
+	</node>
+
+	<!-- LOCALIZATION -->
+	<group if="$(arg use_localization)">
+		<group if="$(arg use_initial_pose)">
+			<rosparam param="initial_pose_x" ns="amcl">0</rosparam>
+			<rosparam param="initial_pose_y" ns="amcl">0</rosparam>
+			<rosparam param="initial_pose_a" ns="amcl">0</rosparam>
+		</group>
+		<node name="amcl" pkg="amcl" type="amcl">
+			<param name="odom_alpha1" type="double" value="7" />
+			<param name="odom_alpha2" type="double" value="7" />
+			<param name="odom_alpha3" type="double" value="3.5" />
+			<param name="odom_alpha4" type="double" value="3.5" />
+			<param name="laser_max_beams" type="int" value="200" />
+			<param name="min_particles" type="int" value="500" />
+			<param name="max_particles" type="int" value="800" />
+			<param name="update_min_d" type="double" value="0.05" />
+			<param name="update_min_a" type="double" value="0.08" />
+		</node>
+	</group>
+
+	<!-- LAUNCH SAFETY LIMITER -->
+	<include file="$(find safety_limiter)/launch/safety_limiter.launch" if="$(arg use_safety)">
+		<arg name="cmd_vel" value="/limiter/cmd_vel" />
+		<arg name="cloud" value="/limiter/cloud" />
+		<arg name="odom" value="/odom" />
+		<arg name="cmd_vel_out" value="/driver/cmd_vel" /> 
+		<arg name="lin_acc" value="0.6" />
+		<arg name="ang_acc" value="0.7" />
+		<arg name="lin_margin" value="0.3" />
+		<arg name="ang_margin" value="0.1" />
+		<arg name="lin_esc_margin" value="0.15" />
+		<arg name="ang_esc_margin" value="0.3" />
+	</include>
+
+</launch>

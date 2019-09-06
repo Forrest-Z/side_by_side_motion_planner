@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<package>
+  <name>laser_preprocess</name>
+  <version>0.1.0</version>
+  <description>Pre-processing of laser data</description>
+
+  <maintainer email="atsushi.w@atr.jp">Atsushi</maintainer>
+  <license>ATR, IRC</license>
+  <author email="atsushi.w@atr.jp">Atsushi</author>
+  <author email="furrer@atr.jp">Jonas</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>roscpp</build_depend>
+  <build_depend>rospy</build_depend>
+  <build_depend>nav_msgs</build_depend>
+  <build_depend>geometry_msgs</build_depend>
+  <build_depend>tf</build_depend>
+  <build_depend>sensor_msgs</build_depend>
+  <build_depend>laser_assembler</build_depend>
+  <build_depend>laser_geometry</build_depend>
+  <build_depend>eigen</build_depend>
+  <build_depend>eigen_conversions</build_depend>
+  <build_depend>pcl_ros</build_depend>
+
+  <run_depend>roscpp</run_depend>
+  <run_depend>rospy</run_depend>
+  <run_depend>roscpp</run_depend>
+  <run_depend>nav_msgs</run_depend>
+  <run_depend>geometry_msgs</run_depend>
+  <run_depend>tf</run_depend>
+  <run_depend>sensor_msgs</run_depend>
+  <run_depend>laser_assembler</run_depend>
+  <run_depend>laser_geometry</run_depend>
+  <run_depend>eigen</run_depend>
+  <run_depend>eigen_conversions</run_depend>
+  <run_depend>pcl_ros</run_depend>
+</package>

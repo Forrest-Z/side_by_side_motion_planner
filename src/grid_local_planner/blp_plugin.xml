@@ -1,0 +1,7 @@
+<library path="lib/libgrid_local_planner">
+  <class name="grid_local_planner/GridPlannerROS" type="grid_local_planner::GridPlannerROS" base_class_type="nav_core::BaseLocalPlanner">
+    <description>
+      grid based local planner
+    </description>
+  </class>
+</library>

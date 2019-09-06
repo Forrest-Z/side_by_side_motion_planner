@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<package>
+  <name>joystick_teleop</name>
+  <version>0.1.0</version>
+  <description>The joystick_teleop package</description>
+
+  <maintainer email="jonas@atr.jp">jonas</maintainer>
+  <maintainer email="florent@atr.jp">Florent</maintainer>
+  <license>ATR, IRC</license>
+  <author email="jonas@atr.jp">Jonas</author>
+  <author email="florent@atr.jp">Florent</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>roscpp</build_depend>
+  <build_depend>sensor_msgs</build_depend>
+  <build_depend>geometry_msgs</build_depend>
+  
+  <run_depend>roscpp</run_depend>
+  <run_depend>sensor_msgs</run_depend>
+  <run_depend>geometry_msgs</run_depend>
+  <run_depend>wiimote</run_depend>
+
+</package>

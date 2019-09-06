@@ -1,0 +1,15 @@
+<launch>
+  <node pkg="tf" type="static_transform_publisher" name="link1_broadcaster" args="0 0 0 0 0 0  laser map 100" />
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find sbs_motion)/sbs.rviz"/> 
+  <arg name="v1" default="/v1"/>
+  <arg name="v2" default="/v2"/> 
+
+  <include file="$(find sbs_motion)/launch/agent.launch">
+    <arg name="ns" value="$(arg v2)"/>
+    <arg name="partner" value="$(arg v1)"/>
+    <arg name="id" value="2"/>
+    <arg name="initialPoseX" value="12.683"/>
+    <arg name="initialPoseY" value="1.840"/>
+    <arg name="initialPoseTheta" value="-0.521"/>
+  </include>
+</launch>

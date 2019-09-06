@@ -1,0 +1,8 @@
+<launch>
+  <!--<node pkg="udp" type="odom_in_map_server.py" name="udp_odom_server" ns="/v1"/>-->
+
+<node pkg="udp" type="points_server.py" name="points_server" ns="/v1">
+  <remap from="/shareGoals" to="/sendGoals"/>
+</node>
+
+</launch>

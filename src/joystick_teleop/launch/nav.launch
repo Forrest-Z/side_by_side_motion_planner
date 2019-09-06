@@ -1,0 +1,33 @@
+<launch>
+  <arg name="dev" default="/dev/input/js0"/>
+  <arg name="cmd_vel_out" default="/cmd_vel_mux/joystick_controller" />
+  <arg name="max_linear_vel" default="1.0"/>
+  <arg name="max_angular_vel" default="0.5"/>
+  <arg name="timeout_duration" default="-1" />
+  <arg name="use_ackermann" default="false" />
+  <arg name="teleoperation_node" default="joystick_teleop" />
+
+  <!-- 
+  	   <arg name="teleoperation_node" default="ackermann_joystick_teleop" />
+	   <arg name="max_steering_angle" default="0.52"/>
+  </group> 
+  -->
+
+  <node respawn="true" pkg="joy" type="joy_node" name="nav" >
+    <param name="dev" type="string" value="$(arg dev)" />
+    <remap from="joy" to="joystick_teleop/joy" />
+  </node>
+
+  <!-- JOYSTICK TELEOP -->
+  
+  <node respawn="true" pkg="joystick_teleop" type="joystick_teleop_node" name ="$(arg teleoperation_node)" >
+    <param name="activate_button_id" value="6" type="int" />
+    <param name="axis_linear_id" value="1" type="int" />
+    <param name="axis_angular_id" value="0" type="int" />
+    <param name="max_linear_vel" value="$(arg max_linear_vel)" type="double" />
+    <param name="max_angular_vel" value="$(arg max_angular_vel)" type="double" />
+    <param name="timeout_duration" value="$(arg timeout_duration)" type="double" />
+    <param name="cmd_vel" value="$(arg cmd_vel_out)" />
+  </node>
+
+</launch>

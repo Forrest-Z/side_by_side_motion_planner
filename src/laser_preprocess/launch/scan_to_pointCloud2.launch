@@ -1,0 +1,27 @@
+<launch>
+	<!-- Convert LRF scan to a pointCloud2 -->
+
+	<!-- ARGUMENTS -->
+	<arg name="range_cutoff" default="10.0"/> 
+	<arg name="use_rviz" default="false" />
+
+	<!-- LRF Node -->
+	<node pkg="urg_node" type="urg_node" name="LRF_node" >
+	        <param name="frame_id" value="laser_frame" type="string" />
+		<param name="angle_min" value="-2.3562" type="double"/>
+		<param name="angle_max" value="2.3562" type="double"/>
+	</node>
+
+	<!-- A TF to set the LRF position  -->
+	<node pkg="tf" type="static_transform_publisher" name="LRF_tf" args="0.0 0.0 0.2 0.0 0.0 0.0 base_link laser_frame 20" />
+
+	<!-- scan to pointcloud2 -->
+	<node pkg="laser_preprocess" type="pc2_transformer" name="scan_to_PointCloud2">
+		<param name="target_frame" value="base_link" type="str"/> 
+		<param name="range_cutoff" value="$(arg range_cutoff)" type="double"/> 
+	</node>
+
+	<!-- Rviz -->
+	<node pkg="rviz" type="rviz" args="-d '$(find laser_preprocess)/launch/rviz/scan_to_pointCloud2.rviz'" name="Rviz" if="$(arg use_rviz)" />
+</launch>
+

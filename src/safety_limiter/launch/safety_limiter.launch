@@ -1,0 +1,61 @@
+<launch>
+	<arg name="cmd_vel" default="/limiter/cmd_vel" />
+	<arg name="odom" default="/odom" />
+	<arg name="cloud" default="/cloud" />
+	<arg name="cmd_vel_out" default="/cmd_vel" />
+	<arg name="disable_command" default="disable_command" />
+	<arg name="use_dynamic_obstacles" default="true" />
+	<arg name="unify_scan" default="false" />
+	<arg name="lin_acc" default="0.6" />
+	<arg name="ang_acc" default="0.7" />
+	<arg name="lin_margin" default="0.3" />
+	<arg name="ang_margin" default="0.1" />
+	<arg name="lin_esc_margin" default="0.15" />
+	<arg name="ang_esc_margin" default="0.3" />
+	<arg name="scan2cloud_fixed_frame" default="map" />
+	<arg name="periodic_scan2cloud_hz" default="20" />
+	<arg name="tf_prefix" default="" />
+	<arg name="use_safety" default="true" />
+
+	<node pkg="safety_limiter" type="safety_limiter" name="limiter" output="screen" if="$(arg use_safety)">
+		<param name="cmd_vel" value="$(arg cmd_vel)" type="string" />
+		<param name="odom" value="$(arg odom)" type="string" />
+		<param name="cloud" value="$(arg cloud)" type="string" />
+		<param name="cmd_vel_out" value="$(arg cmd_vel_out)" type="string" />
+		<param name="disable_command" value="$(arg disable_command)" type="string" />
+		<param name="lin_acc" value="$(arg lin_acc)" type="double" />
+		<param name="ang_acc" value="$(arg ang_acc)" type="double" />
+		<param name="lin_margin" value="$(arg lin_margin)" type="double" />
+		<param name="ang_margin" value="$(arg ang_margin)" type="double" />
+		<param name="lin_esc_margin" value="$(arg lin_esc_margin)" type="double" />
+		<param name="ang_esc_margin" value="$(arg ang_esc_margin)" type="double" />
+		<param name="base_link_id" type="string" value="$(arg tf_prefix)/base_link" />
+		<param name="dynamic" type="string" value="" unless="$(arg use_dynamic_obstacles)" />
+		<param name="dynamic" type="string" value="/motionprediction" if="$(arg use_dynamic_obstacles)" />
+	</node>
+<!--
+	<node name="uni0l" pkg="laser_preprocess" type="uni_density" if="$(arg unify_scan)">
+		<param name="scan" value="/$(arg tf_prefix)/scan" type="string" />
+		<param name="uscan" value="/$(arg tf_prefix)/scan_uni" type="string" />
+		<param name="cull_dist" value="0.05" type="double" />
+		<param name="mixed_dist" value="0.05" type="double" />
+	</node>
+-->
+
+	<node pkg="laser_assembler" type="laser_scan_assembler" name="scan2cloud">
+		<param name="max_scans" type="int" value="100" />
+		<param name="fixed_frame" type="string" value="$(arg scan2cloud_fixed_frame)" />
+		<param name="tf_cache_time_secs" type="double" value="5" />
+		<remap from="scan" to="/$(arg tf_prefix)/scan_orig" if="$(arg unify_scan)" />
+	</node>
+	<node pkg="laser_preprocess" type="periodic_assemble_scans" name="periodic_scan2cloud">
+		<param name="hz" type="double" value="$(arg periodic_scan2cloud_hz)" />
+		<param name="duration" type="double" value="0.2" />
+		<param name="delay" type="double" value="0.05" />
+		<param name="hz" type="double" value="20" />
+		<param name="tf_prefix" type="string" value="$(arg tf_prefix)" />
+		
+		<param name="assemble_scans" type="string" value="$(arg tf_prefix)/assemble_scans" />
+	</node>
+</launch>
+

@@ -1,0 +1,32 @@
+<launch>
+	<arg name="separate_scans" default="false" />
+	<arg name="tf_prefix" default="" />
+	<arg name="use_localization" default="true"/>
+	<arg name="remap_scan_topic" default="false"/>
+	<arg name="scan_topic" default="/scan"/>
+	<arg name="delta_x" default="0" />
+	<arg name="delta_y" default="0" />
+	<arg name="delta_yaw" default="0" />
+
+
+	<node pkg="simple_simulator" type="odo_simulator" name="odo_simple_simulator">
+		<param name="odom_frame_id" type="string" value="$(arg tf_prefix)/odom" />
+		<param name="base_frame_id" type="string" value="$(arg tf_prefix)/base_link" />
+		<remap from="~/base_pose_ground_truth" to="odom" />
+		<remap from="~/cmd_vel" to="cmd_vel" />
+		<param name="initialPoseX" type="double" value="$(arg delta_x)"/>
+		<param name="initialPoseY" type="double" value="$(arg delta_y)"/>
+		<param name="initialPoseTheta" type="double" value="$(arg delta_yaw)"/>
+	</node>
+
+	<node pkg="fake_localization" type="fake_localization" name="amcl" if="$(arg use_localization)">
+		<param name="odom_frame_id" type="string" value="$(arg tf_prefix)/odom" />
+		<param name="base_frame_id" type="string" value="$(arg tf_prefix)/base_link" />
+
+
+
+		<remap from="base_pose_ground_truth" to="odom" />
+	</node>
+
+
+</launch>

@@ -1,0 +1,30 @@
+<launch>
+	<arg name="joystick" default="wiimote" />
+	<arg name="port" default="/dev/actuators/tfrog" />
+
+	<!-- JOYSTICK -->
+	<include file="$(find joystick_teleop)/launch/$(arg joystick).launch">
+		<arg name="max_linear_vel" value="1.0" />
+		<arg name="max_angular_vel" value="0.5" />
+		<arg name="cmd_vel_out" value="/driver/cmd_vel" />
+	</include>
+
+	<!-- DRIVER -->
+	<node pkg="ypspur_ros_bridge" type="RosYPSpur" name="driver" respawn="true">
+		<param name="port"   value="$(arg port)" type="string" /> 
+		<param name="vel"    value="2.0" type="double" /> 
+		<param name="angvel" value="0.8" type="double" /> 
+		<param name="acc"    value="0.8" type="double" /> 
+		<param name="angacc" value="1.0" type="double" /> 
+		<remap from="/driver/odom" to="/odom" />
+	</node>
+
+	<include file="$(find sound_server)/launch/sound_server_play.launch"/>
+
+	<node pkg="joystick_teleop" type="button_cmd_mapper" name="Vader" clear_params="" output="screen">
+        	<param name="cmd" value="rosservice call /play_sound" type="str"/>
+        	<param name="button_id" value="1" type="int"/>
+        	<param name="period" value="5.0" type="double"/>
+	</node>
+
+</launch>

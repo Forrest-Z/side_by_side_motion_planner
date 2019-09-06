@@ -1,0 +1,12 @@
+<launch>
+   <arg name="partner" default="v2"/>
+<arg name="partner_host" default="localhost"/>
+    <!--<node pkg="udp" type="odom_in_map_client.py" name="udp_odom_client">
+      <param name="hostname" value="$(arg partner_host)"/>
+      <param name="odom_topic" value="/$(arg partner)/odom"/>
+      <param name="pose_topic" value="/$(arg partner)/filtered_ndt_current_pose"/>
+    </node>-->
+<node pkg="udp" type="points_client.py" name="points_client" ns="/v1"/>
+
+
+</launch>

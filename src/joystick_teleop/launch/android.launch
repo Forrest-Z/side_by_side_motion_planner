@@ -1,0 +1,23 @@
+<launch>
+	<arg name="cmd_vel_out" />
+	<arg name="max_linear_vel" />
+	<arg name="max_angular_vel" />
+	<arg name="timeout_duration" default="0.1" />
+
+	<!-- WIIMOTE CONTROLLER -->
+	<node respawn="true" pkg="joystick_teleop" type="androidBluetoothServer.py" name="android">
+		<remap from="/joystickApp" to="joystick_teleop/joy" />
+	</node>
+
+	<!-- JOYSTICK TELEOP -->
+	<node respawn="true" pkg="joystick_teleop" type="joystick_teleop_node" name = "joystick_teleop">
+		<param name="activate_button_id" value="0" type="int" />
+	 	<param name="axis_linear_id" value="1" type="int" />
+	 	<param name="axis_angular_id" value="0" type="int" />
+		<param name="max_linear_vel" value="$(arg max_linear_vel)" type="double" />
+		<param name="max_angular_vel" value="$(arg max_angular_vel)" type="double" />
+		<param name="timeout_duration" value="$(arg timeout_duration)" type="double" />
+                <remap from="/joystick_teleop/cmd_vel" to="$(arg cmd_vel_out)" />
+	</node>
+
+</launch>

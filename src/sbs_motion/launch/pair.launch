@@ -1,0 +1,25 @@
+<launch>
+  <arg name="map" default="false"/>
+  <group if="$(arg map)">
+    <arg name="map_file" default="$(find sbs_motion)/maps/coi_6th_floor.yaml" />
+    <node respawn="true" name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)"/>
+    <node pkg="tf" type="static_transform_publisher" name="link1_broadcaster" args="0 0 0 0 0 0  laser map 100" />
+  </group>
+ <arg name="v1" default="/v1"/>
+ <arg name="v2" default="/v2"/> 
+ <node pkg="sbs_motion" type="subgoals" name ="subgoals"/>
+ <include file="$(find sbs_motion)/launch/agent.launch">
+   <arg name="ns" value="$(arg v1)"/>
+   <arg name="partner" value="$(arg v2)"/>
+   <arg name="initialPoseX" value="0.25"/>
+   <arg name="initialPoseY" value="0"/>
+   <arg name="initialPoseTheta" value="1.57"/>
+ </include>
+ <include file="$(find sbs_motion)/launch/agent.launch">
+   <arg name="ns" value="$(arg v2)"/>
+   <arg name="partner" value="$(arg v1)"/>
+   <arg name="initialPoseX" value="-0.25"/>
+   <arg name="initialPoseY" value="0"/>
+   <arg name="initialPoseTheta" value="1.57"/>
+ </include>
+</launch>

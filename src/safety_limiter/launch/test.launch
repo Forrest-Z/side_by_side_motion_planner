@@ -1,0 +1,17 @@
+<launch>
+		<node pkg="safety_limiter" type="safety_limiter" name="limiter" output="screen">
+			<rosparam param="footprint">[[0.95,-0.35], [0.95,0.35], [-0.22,0.35], [-0.22,-0.35]]</rosparam>
+			<param name="cmd_vel" value="/cmd_vel" type="string" />
+			<param name="cmd_vel_out" value="/cmd_vel2" type="string" />
+			<param name="lin_acc" value="0.4" type="double" />
+			<param name="ang_acc" value="0.7" type="double" />
+		</node>
+		<node pkg="laser_assembler" type="laser_scan_assembler" name="scan2cloud">
+			<remap from="/scan" to="scan" />
+			<param name="max_scans" type="int" value="100" />
+			<param name="fixed_frame" type="string" value="map" />
+			<param name="tf_cache_time_secs" type="double" value="5" />
+		</node>
+		<node pkg="laser_preprocess" type="periodic_assemble_scans" name="periodic_scan2cloud" />
+</launch>
+

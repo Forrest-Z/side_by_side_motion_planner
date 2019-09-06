@@ -1,0 +1,15 @@
+ <launch>
+   <arg name="point_topic" default="/velodyne32/velodyne_points" />
+   <arg name="sensor_model" default="32" />
+   <arg name="occMapTopicName" default="/occmap"/>
+ 
+
+  <node name="Grid_Map_Sim" pkg="occmap" type="occMap_node">
+    <param name="occMapTopicName" value="$(arg occMapTopicName)"/>
+    <param name="sub" value="/vertical_points" type="str"/>
+    <param name="viz" value="/downsampled_points" type="str"/>
+    <param name="leafSize" value="0.1" type="double"/>
+    <param name="width" value="10" type="double"/>
+    <param name="dist" value="16.25" type="double"/>
+  </node>
+ </launch>

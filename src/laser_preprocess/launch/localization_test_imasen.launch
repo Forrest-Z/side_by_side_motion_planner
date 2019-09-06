@@ -1,0 +1,84 @@
+<launch>
+	<arg name="wiimote" default="true" />	
+	<!-- REMOTE CONTROLLER -->
+	<node respawn="true" pkg="wiimote" type="wiimote_node.py" name="nunchuk" if="$(arg wiimote)">
+		<remap from="/wiimote/nunchuk" to="p3_teleop/joy" />
+	</node>
+
+	<!-- set its private parameters -->
+ 	<param name="p3_teleop/topic" value="RosYPSpur" type="string" />
+	<param name="p3_teleop/safe_driving" value="false" type="bool" />
+	<param name="p3_teleop/axis_linear_id" value="1" type="int" />
+ 	<param name="p3_teleop/axis_angular_id" value="0" type="int" />
+	<param name="p3_teleop/scale_adj_linear" value="0.8" type="double" />
+	<param name="p3_teleop/scale_adj_angular" value="0.1" type="double" />
+	<!-- invoke the sub-launcher -->
+	<include file="$(find p3_teleop)/launch/p3_teleop.launch" if="$(arg wiimote)" />
+
+	<node pkg="laser_preprocess" type="uni_density" name="ud_left">
+		<param name="scan" value="/scan_left_orig" type="string" />
+		<param name="uscan" value="/scan_left" type="string" />
+		<param name="cull_dist" value="0.2" type="double" />
+		<param name="mixed_dist" value="0.6" type="double" />
+	</node>
+	<node pkg="laser_preprocess" type="uni_density" name="ud_right">
+		<param name="scan" value="/scan_right_orig" type="string" />
+		<param name="uscan" value="/scan_right" type="string" />
+		<param name="cull_dist" value="0.2" type="double" />
+		<param name="mixed_dist" value="0.6" type="double" />
+	</node>
+
+	<node pkg="laser_preprocess" type="cut" name="cut_left">
+		<param name="scan" value="/scan_left" type="string" />
+		<param name="uscan" value="/scan_left2" type="string" />
+		<param name="start" value="220" type="int" />
+		<param name="end" value="350" type="int" />
+	</node>
+	<node pkg="laser_preprocess" type="cut" name="cut_right">
+		<param name="scan" value="/scan_right" type="string" />
+		<param name="uscan" value="/scan_right2" type="string" />
+		<param name="start" value="0" type="int" />
+		<param name="end" value="200" type="int" />
+	</node>
+
+
+	<node pkg="laser_preprocess" type="cut" name="cut_left2">
+		<param name="scan" value="/scan_left2" type="string" />
+		<param name="uscan" value="/scan" type="string" />
+		<param name="start" value="0" type="int" />
+		<param name="end" value="80" type="int" />
+	</node>
+	<node pkg="laser_preprocess" type="cut" name="cut_right2">
+		<param name="scan" value="/scan_right2" type="string" />
+		<param name="uscan" value="/scan" type="string" />
+		<param name="start" value="1000" type="int" />
+		<param name="end" value="1080" type="int" />
+	</node>
+
+	<node name="urg_node_left" pkg="urg_node" type="urg_node">
+		<param name="serial_port" type="string" value="/dev/ttyACM0" />
+		<param name="frame_id" type="string" value="laser_left" />
+		<remap from="scan" to="scan_left_orig" />
+	</node>
+	<node name="urg_node_right" pkg="urg_node" type="urg_node">
+		<param name="serial_port" type="string" value="/dev/ttyACM1" />
+		<param name="frame_id" type="string" value="laser_right" />
+		<remap from="scan" to="scan_right_orig" />
+	</node>
+
+	<node pkg="tf" type="static_transform_publisher" name="tf_left" args="0.62 0.29 0 0.96 0 3.14 base_link laser_left 20" />
+	<node pkg="tf" type="static_transform_publisher" name="tf_right" args="0.62 -0.29 0 -0.76 0 3.14 base_link laser_right 20" />
+	    
+	<node pkg="imasen_wheelchair" type="rosImasenWheelchair" name="robot" />
+
+	<node name="amcl" pkg="amcl" type="amcl">
+		<param name="odom_alpha1" type="double" value="1.5" />
+		<param name="odom_alpha2" type="double" value="0.9" />
+		<param name="odom_alpha3" type="double" value="0.6" />
+		<param name="odom_alpha4" type="double" value="0.8" />
+		<param name="laser_max_beams" type="int" value="200" />
+		<param name="min_particles" type="int" value="100" />
+		<remap from="scan_left" to="scan" />
+	</node>
+</launch>
+

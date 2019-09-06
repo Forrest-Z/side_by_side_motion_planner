@@ -1,0 +1,35 @@
+	<launch>  
+	<arg name="tf_prefix" default="" />
+	<arg name="use_fake_localization" default="true"/>
+	<arg name="remap_scan_topic" default="false"/>
+	<arg name="scan_topic" default="/scan"/>
+	<arg name="front_back_baseline" default="2.7"/>
+	<arg name="initialPoseX" default="0.0"/>
+	<arg name="initialPoseY" default="0.0"/>
+	<arg name="initialPoseTheta" default="0.0"/>
+	
+	
+	<node pkg="simple_simulator" type="ackermann_simulator" name="ackermann_simple_simulator">
+		<param name="odom_frame_id" type="string" value="$(arg tf_prefix)/map" />
+		<param name="base_frame_id" type="string" value="$(arg tf_prefix)/odometry_frame" />
+		<param name="front_back_baseline" type="double" value="$(arg front_back_baseline)"/>
+		<param name="initialPoseX" type="double" value="$(arg initialPoseX)"/>
+		<param name="initialPoseY" type="double" value="$(arg initialPoseY)"/>
+		<param name="initialPoseTheta" type="double" value="$(arg initialPoseTheta)"/>
+		<remap from="~/base_pose_ground_truth" to="/odom" />
+		       				           
+		<param name="cmd_vel" type="string" value="/ypspur_driver/cmd_vel" />
+	</node>
+
+	<node pkg="fake_localization" type="fake_localization" name="fake_amcl" if="$(arg use_fake_localization)">
+		<param name="odom_frame_id" type="string" value="$(arg tf_prefix)/odom" />
+		<param name="base_frame_id" type="string" value="$(arg tf_prefix)/odometry_frame" />
+		<remap from="/base_pose_ground_truth" to="/odom" />
+	</node>
+
+	<node pkg="simple_simulator" type="utm_simulator" name="simulator_hokuyo">
+		<param name="frame_id" type="string" value="$(arg tf_prefix)/laser" />
+		<remap from="~/scan" to="$(arg scan_topic)" if="$(arg remap_scan_topic)"/>
+	</node>
+
+</launch>

@@ -1,0 +1,35 @@
+<launch >
+	<!-- map directory -->
+	<arg name="mapdir" default="$(env HOME)/maps/garage/" />
+
+	<!-- tf -->
+	<node name="filtered_ndt_frame_to_base_link" pkg="tf" type="static_transform_publisher" args="0 0 0 0 0 0 ndt_frame base_link 100" />
+
+	<!-- ndt scan matching -->
+	<node name="ndt3d_with_odom" pkg="ndt3d" type="ndt3d_with_odom" args="$(arg mapdir)config.ndt" >
+		<param name="odom_topic_name" value="/odom" type="string" />
+ 		<param name="save_map" value="true" type="bool" />
+		<param name="add_map_points" value="true" type="bool" />
+		<param name="is_slam_mode" value="true" type="bool" />
+		<param name="use_voxel_grid_filter" value="true" type="bool" />
+		<param name="voxel_leaf_size" value="1.0" type="double" />
+		<param name="use_odometry" value="true" type="bool" />
+		<param name="odom_interval" value="3" type="int" />
+		<param name="odom_noise1" value="0.00145" type="double" />
+		<param name="odom_noise2" value="0.00185" type="double" />
+		<param name="odom_noise3" value="0.00235" type="double" />
+		<param name="odom_noise4" value="0.00235" type="double" />
+		<param name="odom_noise5" value="0.00145" type="double" />
+		<param name="odom_noise6" value="0.00185" type="double" />
+		<param name="use_fusion" value="false" type="bool" />
+		<param name="ndt_noise_level" value="50.0" type="double" />
+		<param name="min_trace" value="0.1" type="double" />
+		<param name="use_mahalanobis_dist" value="true" type="bool" />
+		<param name="mahalanobis_dist_threshold" value="300.0" type="double" />
+		<param name="is_flat_surface" value="false" type="bool" />
+		<param name="debug_flag" value="true" type="bool" />
+		<param name="euclid_dist_threshold" value="4.0" type="double" />
+		<param name="yaw_andle_threshold" value="6.0" type="double" />
+		<param name="add_noise_ndt" value="false" type="bool" />
+	</node >
+</launch >

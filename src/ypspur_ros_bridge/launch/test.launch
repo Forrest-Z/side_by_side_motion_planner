@@ -1,0 +1,148 @@
+<launch>
+	<arg name="junk" default="false" />
+	<arg name="icartmini" default="false" />
+	<arg name="wc" default="false" />
+	<arg name="localization" default="true" />
+
+	<node name="urg_node" pkg="urg_node" type="urg_node">
+		<param name="serial_port" type="string" value="/dev/sensors/hokuyo_H1102797" />
+		<param name="frame_id" type="string" value="laser" />
+		<remap from="scan" to="/scan_orig" />
+	</node>
+	<node name="cut1l" pkg="laser_preprocess" type="cut" if="$(arg wc)">
+		<param name="scan" value="/scan_orig" type="string" />
+		<param name="uscan" value="/laser_pre/_1l" type="string" />
+		<param name="start" value="0" type="int" />
+		<param name="end" value="110" type="int" />
+	</node>
+	<node name="cut2l" pkg="laser_preprocess" type="cut" if="$(arg wc)">
+		<param name="scan" value="/laser_pre/_1l" type="string" />
+		<param name="uscan" value="/laser_pre/_2l" type="string" />
+		<param name="start" value="160" type="int" />
+		<param name="end" value="220" type="int" />
+	</node>
+	<node name="cut3l" pkg="laser_preprocess" type="cut" if="$(arg wc)">
+		<param name="scan" value="/laser_pre/_2l" type="string" />
+		<param name="uscan" value="/laser_pre/_3l" type="string" />
+		<param name="start" value="980" type="int" />
+		<param name="end" value="1080" type="int" />
+	</node>
+	<node name="cut4l" pkg="laser_preprocess" type="cut" if="$(arg wc)">
+		<param name="scan" value="/laser_pre/_3l" type="string" />
+		<param name="uscan" value="/laser_pre/_4l" type="string" />
+		<param name="start" value="850" type="int" />
+		<param name="end" value="880" type="int" />
+	</node>
+	<node name="uni0l" pkg="laser_preprocess" type="uni_density" if="$(arg wc)">
+		<param name="scan" value="/laser_pre/_4l" type="string" />
+		<param name="uscan" value="/scan" type="string" />
+		<param name="cull_dist" value="0.8" type="double" />
+		<param name="mixed_dist" value="10" type="double" />
+	</node>
+	<node name="uni1l" pkg="laser_preprocess" type="uni_density" if="$(arg wc)">
+		<param name="scan" value="/laser_pre/_4l" type="string" />
+		<param name="uscan" value="/scan_hd" type="string" />
+		<param name="cull_dist" value="0.3" type="double" />
+		<param name="mixed_dist" value="10" type="double" />
+	</node>
+
+	<node name="urg_node2" pkg="urg_node" type="urg_node">
+		<param name="serial_port" type="string" value="/dev/sensors/hokuyo_H1102788" />
+		<param name="frame_id" type="string" value="laser_r" />
+		<remap from="scan" to="/scan_orig_r" />
+	</node>
+	<node name="cut1r" pkg="laser_preprocess" type="cut" if="$(arg wc)">
+		<param name="scan" value="/scan_orig_r" type="string" />
+		<param name="uscan" value="/laser_pre/_1r" type="string" />
+		<param name="start" value="850" type="int" />
+		<param name="end" value="1080" type="int" />
+	</node>
+	<node name="cut2r" pkg="laser_preprocess" type="cut" if="$(arg wc)">
+		<param name="scan" value="/laser_pre/_1r" type="string" />
+		<param name="uscan" value="/laser_pre/_2r" type="string" />
+		<param name="start" value="0" type="int" />
+		<param name="end" value="100" type="int" />
+	</node>
+	<node name="uni0r" pkg="laser_preprocess" type="uni_density" if="$(arg wc)">
+		<param name="scan" value="/laser_pre/_2r" type="string" />
+		<param name="uscan" value="/scan" type="string" />
+		<param name="cull_dist" value="0.8" type="double" />
+		<param name="mixed_dist" value="10" type="double" />
+	</node>
+	<node name="uni1r" pkg="laser_preprocess" type="uni_density" if="$(arg wc)">
+		<param name="scan" value="/laser_pre/_2r" type="string" />
+		<param name="uscan" value="/scan_hd" type="string" />
+		<param name="cull_dist" value="0.3" type="double" />
+		<param name="mixed_dist" value="10" type="double" />
+	</node>
+
+
+	<node name="joy_node" pkg="joy" type="joy_node">
+		<remap from="/joy" to="/teleop/joy" />
+	</node>
+	<node name="teleop" pkg="p3_teleop" type="p3_teleop_node">
+		<param name="scale_adj_angular" value="0.08" type="double" />
+		<param name="scale_adj_linear" value="0.7" type="double" />
+	</node>
+	<node name="vel_smooth" pkg="control_smoother" type="control_smoother">
+		<param name="cmd_vel" value="/teleop/cmd_vel" type="string" /> 
+		<param name="cmd_vel_out" value="/cmd_vel" type="string" /> 
+		<param name="lin_acc" value="0.4" type="double" /> 
+		<param name="ang_acc" value="0.6" type="double" /> 
+	</node>
+
+	<node pkg="ypspur_ros_bridge" type="RosYPSpur" name="robot" respawn="true">
+		<param name="port"   value="/dev/actuators/tfrog" type="string" /> 
+		<param name="vel"    value="2.0" type="double" /> 
+		<param name="angvel" value="0.8" type="double" /> 
+		<param name="acc"    value="0.8" type="double" /> 
+		<param name="angacc" value="1.0" type="double" /> 
+		<param name="origin_id" value="map" type="string" />
+		<remap from="/robot/odom" to="/odom" />
+	</node>
+
+	<node pkg="safety_limiter" type="safety_limiter" name="limiter" output="screen">
+		<rosparam param="footprint">
+[[0.5,-0.45], [0.5,0.3], [0.15,0.37], [-0.15,0.37], [-0.75,0.35], [-0.75,-0.35], [-0.15,-0.37], [0.15,-0.37], [0.2,-0.45]]</rosparam>
+		<param name="cmd_vel" value="/cmd_vel" type="string" />
+		<param name="cmd_vel_out" value="/robot/cmd_vel" type="string" />
+		<param name="lin_acc" value="0.6" type="double" />
+		<param name="ang_acc" value="0.7" type="double" />
+		<param name="lin_margin" value="0.3" type="double" />
+		<param name="ang_margin" value="0.1" type="double" />
+		<param name="lin_esc_margin" value="0.15" type="double" />
+		<param name="ang_esc_margin" value="0.3" type="double" />
+	</node>
+	<node pkg="laser_assembler" type="laser_scan_assembler" name="scan2cloud">
+		<remap from="scan" to="/scan_hd" />
+		<param name="max_scans" type="int" value="100" />
+		<param name="fixed_frame" type="string" value="map" />
+		<param name="tf_cache_time_secs" type="double" value="5" />
+	</node>
+
+	<node pkg="laser_preprocess" type="periodic_assemble_scans" name="periodic_scan2cloud">
+		<param name="hz" type="double" value="20" />
+		<param name="duration" type="double" value="0.5" />
+	</node>
+
+	<node name="amcl" pkg="amcl" type="amcl" if="$(arg localization)">
+		<param name="odom_alpha1" type="double" value="1.2" />
+		<param name="odom_alpha2" type="double" value="1.2" />
+		<param name="odom_alpha3" type="double" value="1.2" />
+		<param name="odom_alpha4" type="double" value="1.2" />
+		<param name="laser_max_beams" type="int" value="3000" />
+		<param name="min_particles" type="int" value="500" />
+		<param name="max_particles" type="int" value="800" />
+		<param name="update_min_d" type="double" value="0.05" />
+		<param name="update_min_a" type="double" value="0.08" />
+	</node>
+
+
+	<node pkg="tf" type="static_transform_publisher" name="tf" args="-0.05 0 0 0 0 0 base_link laser 20" if="$(arg junk)" />
+	<node pkg="tf" type="static_transform_publisher" name="tf" args="0.03 0 0 0 0 0 base_link laser 20" if="$(arg icartmini)" />
+	<node pkg="tf" type="static_transform_publisher" name="tf" args="0.25 -0.07 0 -0.05 0 3.14 base_link laser 20" if="$(arg wc)" />
+	<node pkg="tf" type="static_transform_publisher" name="tf_r" args="-0.45 0.16 0 3.12 0 0 base_link laser_r 20" if="$(arg wc)" />
+
+
+</launch>
+

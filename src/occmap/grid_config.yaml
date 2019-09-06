@@ -1,0 +1,29 @@
+grid_map_topic: /occmap
+
+grid_map_visualizations:
+
+  - name: elevation_points
+    type: point_cloud
+    params:
+     layer: elevation
+     
+  - name: map_region
+    type: map_region
+    params:
+     color: 3289650
+     line_width: 0.003
+    
+  - name: OccupancyGrid
+    type: occupancy_grid
+    params:
+     layer: traversability
+     data_min: 0
+     data_max: 1
+     
+
+  - name: elevation_cells
+    type: grid_cells
+    params:
+     layer: elevation
+     lower_threshold: -0.08
+     upper_threshold: 0.0

@@ -1,0 +1,7 @@
+<library path="lib/libgrid_local_planner">
+  <class name="grid_local_planner/GlobalPlanner" type="grid_local_planner::GlobalPlanner" base_class_type="nav_core::BaseGlobalPlanner">
+    <description>
+      grid based local planner
+    </description>
+  </class>
+</library>

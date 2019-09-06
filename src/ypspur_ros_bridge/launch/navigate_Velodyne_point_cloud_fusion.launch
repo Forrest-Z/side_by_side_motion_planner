@@ -1,0 +1,67 @@
+<launch>
+	<!-- ARGUMENTS -->
+	<arg name="robot" default="icartmini1"/>
+	<arg name="map_file" default="$(env HOME)/catkin_ws/maps/entire_map_cropped.yaml"/>
+	<!--<arg name="map_file" default="$(env HOME)/catkin_ws/maps/erica_20150909.yaml"/>-->
+	<!--<arg name="map_file" default="$(env HOME)/catkin_ws/maps/luis_atr_1f.yaml" />/-->
+	<arg name="use_safety" default="false" />
+	<arg name="use_joystick" default="true" />
+	<arg name="joystick" default="wiimote" />
+	<arg name="max_linear_vel" default="0.6" />
+	<arg name="max_angular_vel" default="0.3" />
+
+	<!-- Velodyne and voxel grid filter -->
+	<arg name="leaf_size" default="0.01"/>
+	<arg name="range_cutoff" default="3.0" />
+	<arg name="filtered_cloud_frequency_Hz" default="5"/>
+	<arg name="x_min" default="-5.0"/> 
+	<arg name="x_max" default="5.0"/> 
+	<arg name="y_min" default="-5.0"/> 
+	<arg name="y_max" default="5.0"/> 
+	<arg name="z_min" default="-1.0"/> 
+	<arg name="z_max" default="2.5"/> 
+
+	<!-- LAUNCH BASE DRIVERS -->
+	<include file="$(find ypspur_ros_bridge)/launch/$(arg robot).launch">
+		<arg name="use_safety" value="$(arg use_safety)" />
+		<arg name="use_initial_pose" value="false" />	
+	</include>
+	
+	<!-- PUBLISH MAP -->
+	<node required="false" name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)"/> 
+
+	<!-- JOYSTICK -->
+	<include file="$(find joystick_teleop)/launch/$(arg joystick).launch" if="$(arg use_joystick)">
+		<arg name="max_linear_vel" value="$(arg max_linear_vel)" />
+		<arg name="max_angular_vel" value="$(arg max_angular_vel)" />
+		<arg name="cmd_vel_out" value="/cmd_vel_mux/joystick_controller" />
+	</include>
+
+  	<node pkg="nodelet" type="nodelet" name="base_nodelet_manager" args="manager" />
+
+	<!-- VELOCITY COMMAND MULTIPLEXER -->
+	<node pkg="nodelet" type="nodelet" name="cmd_vel_mux" args="load yocs_cmd_vel_mux/CmdVelMuxNodelet base_nodelet_manager" >
+	    <param name="yaml_cfg_file" value="$(find ypspur_ros_bridge)/config/cmd_mux_config.yaml" />
+	    <remap from="cmd_vel_mux/output" to="/limiter/cmd_vel" if="$(arg use_safety)" />
+	    <remap from="output" to="/limiter/cmd_vel" if="$(arg use_safety)" />
+	    <remap from="cmd_vel_mux/output" to="/driver/cmd_vel" unless="$(arg use_safety)" />
+			<remap from="output" to="/driver/cmd_vel" unless="$(arg use_safety)" />
+  	</node>
+
+	<include file="$(find pointcloud_preprocess)/launch/Velodyne_pcd_preprocess.launch" >
+		<arg name="use_PCD" value="true"/>
+		<arg name="period" value="0.5"/>
+		<arg name="leaf_size" value="$(arg leaf_size)"/>
+		<arg name="range_cutoff" value="$(arg range_cutoff)" />
+		<arg name="filtered_cloud_frequency_Hz" value="$(arg filtered_cloud_frequency_Hz)"/>
+		<arg name="x_min" value="$(arg x_min)"/> 
+		<arg name="x_max" value="$(arg x_max)"/> 
+		<arg name="y_min" value="$(arg y_min)"/> 
+		<arg name="y_max" value="$(arg y_max)"/> 
+		<arg name="z_min" value="$(arg z_min)"/> 
+		<arg name="z_max" value="$(arg z_max)"/> 
+	</include> 
+
+	<!-- VISUALIZER -->
+	<node pkg="rviz" type="rviz" args="-d '$(find ypspur_ros_bridge)/launch/rviz/navigate_Velodyne_point_cloud_fusion.rviz'" name="visualizer" />
+</launch>

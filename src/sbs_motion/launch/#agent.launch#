@@ -1,0 +1,50 @@
+<launch>
+  <arg name="ns" default="v1"/>
+  <arg name="partner" default="v2"/>
+  <arg name="initialPoseX" default="1.0"/>
+  <arg name="initialPoseY" default="1.0"/>
+  <arg name="initialPoseTheta" default="0.0"/>
+  <arg name="agents" default="2"/>
+  <arg name="id" default="1"/>
+  <arg name="use_simulator" default="true" />
+  <arg name="use_localization" default="true"/>
+
+  <arg name="port" default="/dev/actuators/tfrog" />		
+  <arg name="top_port_lrf" default="192.168.150.10" />
+  <arg name="tough_port_lrf" default="192.168.0.10" />
+  <arg name="port_ip" default="10940" />
+
+  <arg name="mapdir" default="/home/$(env USER)/maps/2017_10_26_around_nic/"/>
+
+  <group ns="$(arg ns)">
+    <!--Launch agent-->
+    <node pkg="sbs_motion" type="sbs_agent" name ="agent" output="screen" >
+      <param name="partner" value="$(arg partner)"/>
+      <param name="agents" value="$(arg agents)"/>
+      <param name="id" value="$(arg id)"/>		
+      <param name="initialPoseX" value="$(arg initialPoseX)"/>
+      <param name="initialPoseY" value="$(arg initialPoseY)"/>
+      <rosparam command="load" file="$(find sbs_motion)/launch/util.yaml" />
+    </node>
+
+
+
+    <include file="$(arg catkin_ws_folder)/robots/$(arg robot).launch" unless="$(arg use_simulator)">
+      <arg name="use_safety" value="$(arg use_safety)" />
+      <arg name="use_trajectory_tracker" value="true" />
+      <arg name="use_simulator" value="false" />
+      <arg name="use_frene_planner" value="false" />
+      <arg name="tf_prefix" value="$(arg ns)" />
+    </include>
+
+    <!-- LAUNCH SIMULATOR -->
+    <include file="$(find simple_simulator)/launch/simulator_wc.launch" if="$(arg use_simulator)">
+      <arg name="tf_prefix" value="$(arg ns)" />
+      <arg name="use_localization" value="$(arg use_localization)" />
+      <arg name="delta_x" value="$(arg initialPoseX)" />
+      <arg name="delta_y" value="$(arg initialPoseY)" />
+      <arg name="delta_yaw" value="$(arg initialPoseTheta)" />
+    </include>    
+
+  </group>
+</launch>

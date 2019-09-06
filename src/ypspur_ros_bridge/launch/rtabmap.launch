@@ -1,0 +1,100 @@
+<launch>
+	<!-- ARGUMENTS -->
+	<arg name="port" default="/dev/actuators/tfrog" />
+	<arg name="port_lrf" default="/dev/sensors/hokuyo_H1109391" />
+	<arg name="use_joystick" default="true" />
+	<arg name="joystick" default="nav" />
+	<arg name="max_linear_vel" default="0.4" />
+	<arg name="max_angular_vel" default="0.3" />
+	<arg name="rtabmapviz" default="true" /> 
+	
+	<node pkg="tf" type="static_transform_publisher" name="camera_tf" args="-0.13 -0.17 0.85 -1.57 0 0 base_link camera_link 20" />
+	
+	<node pkg="tf" type="static_transform_publisher" name="laser_tf" args="0.085 0 0.24 0 0 0 base_link base_laser_link 20" />
+
+	<!-- LRF -->
+    	<node name="urg_node" pkg="urg_node" type="urg_node">
+		<param name="serial_port" value="$(arg port_lrf)" type="string" />
+		<param name="frame_id" type="string" value="base_laser_link" />
+		<param name="calibrate_time" type="bool" value="true" />
+	</node>
+
+	<!-- DRIVER -->
+	<node pkg="ypspur_ros_bridge" type="RosYPSpur" name="driver" respawn="true">
+		<param name="port"   value="$(arg port)" type="string" /> 
+		<param name="vel"    value="2.0" type="double" /> 
+		<param name="angvel" value="0.8" type="double" /> 
+		<param name="acc"    value="0.8" type="double" /> 
+		<param name="angacc" value="1.0" type="double" /> 
+		<param name="hz"     value="50" type="double" /> 
+		<param name="origin_id" value="" type="string" />
+		<remap from="/driver/odom" to="/odom" />
+		<remap from="/driver/cmd_vel" to="/cmd_vel"/>
+	</node>
+	
+	<!-- JOYSTICK -->
+	<include file="$(find joystick_teleop)/launch/$(arg joystick).launch" if="$(arg use_joystick)">
+		<arg name="max_linear_vel" value="$(arg max_linear_vel)" />
+		<arg name="max_angular_vel" value="$(arg max_angular_vel)" />
+		<arg name="cmd_vel_out" value="/cmd_vel" />
+	</include>
+	
+	<include file="$(find openni2_launch)/launch/openni2.launch">
+	    <arg name="depth_registration" value="true"/>
+	</include> 
+
+ <group ns="rtabmap">
+    <!-- SLAM (robot side) -->
+    <!-- args: "delete_db_on_start" and "udebug" -->
+    <node name="rtabmap" pkg="rtabmap_ros" type="rtabmap" output="screen" args="--delete_db_on_start">
+	  <param name="frame_id" type="string" value="base_link"/>
+	  <param name="wait_for_transform" type="bool" value="true"/>
+	
+	  <param name="subscribe_depth" type="bool" value="true"/>
+	  <param name="subscribe_laserScan" type="bool" value="true"/>
+	
+	  <remap from="odom" to="/odom"/>
+	  <remap from="scan" to="/scan"/>
+
+	  <remap from="rgb/image" to="/camera/rgb/image_rect_color"/>
+  	  <remap from="depth/image" to="/camera/depth_registered/image_raw"/>
+  	  <remap from="rgb/camera_info" to="/camera/rgb/camera_info"/>
+  	<!--
+      <param name="rgb/image_transport" type="string" value="compressed"/>
+      <param name="depth/image_transport" type="string" value="compressedDepth"/>
+	-->
+	  <!-- RTAB-Map's parameters: do "rosrun rtabmap rtabmap (double-dash)params" to see the list of available parameters. -->
+	  <param name="RGBD/PoseScanMatching" type="string" value="true"/>  <!-- Do odometry correction with consecutive laser scans -->
+	  <param name="RGBD/LocalLoopDetectionSpace" type="string" value="true"/>  <!-- Local loop closure detection (using estimated position) with locations in WM -->
+	  <param name="RGBD/LocalLoopDetectionTime" type="string" value="false"/>   <!-- Local loop closure detection with locations in STM -->
+	  <param name="RGBD/OptimizeFromGraphEnd" type="string" value="true"/> 
+	  <param name="LccIcp/Type" type="string" value="2"/>                      <!-- 0=No ICP, 1=ICP 3D, 2=ICP 2D -->
+	  <param name="LccBow/MaxDepth" type="string" value="0.0"/>                <!-- 3D visual words maximum depth 0=infinity -->
+	  <param name="LccBow/InlierDistance" type="string" value="0.1"/>          <!-- 3D visual words correspondence distance -->
+      <param name="RGBD/OptimizeFromGraphEnd" type="string" value="false"/>    <!-- Optimize graph from initial node so /map -> /odom transform will be generated -->
+    </node>
+    
+    <!-- Visualisation RTAB-Map -->
+    <node if="$(arg rtabmapviz)" pkg="rtabmap_ros" type="rtabmapviz" name="rtabmapviz" args="-d $(find rtabmap_ros)/launch/config/rgbd_gui.ini" output="screen">
+  	  <param name="subscribe_depth" type="bool" value="true"/>
+      <param name="subscribe_laserScan" type="bool" value="true"/>
+      <param name="frame_id" type="string" value="base_link"/>
+      <param name="wait_for_transform" type="bool" value="true"/>
+    
+      <remap from="rgb/image" to="/camera/rgb/image_rect_color"/>
+  	  <remap from="depth/image" to="/camera/depth_registered/image_raw"/>
+  	  <remap from="rgb/camera_info" to="/camera/rgb/camera_info"/>
+  	  <remap from="odom" to="/odom"/>
+      <remap from="scan" to="/scan"/>
+      <!--
+      <param name="rgb/image_transport" type="string" value="compressed"/>
+      <param name="depth/image_transport" type="string" value="compressedDepth"/>
+      -->
+    </node>
+  </group>
+
+	
+   
+</launch>
+
+

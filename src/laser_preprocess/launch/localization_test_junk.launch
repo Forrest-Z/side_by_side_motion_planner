@@ -1,0 +1,49 @@
+<launch>
+	<arg name="wiimote" default="true" />	
+	<!-- REMOTE CONTROLLER -->
+	<node respawn="true" pkg="wiimote" type="wiimote_node.py" name="nunchuk" if="$(arg wiimote)">
+		<remap from="/wiimote/nunchuk" to="p3_teleop/joy" />
+	</node>
+
+	<!-- set its private parameters -->
+ 	<param name="p3_teleop/topic" value="RosYPSpur" type="string" />
+	<param name="p3_teleop/safe_driving" value="false" type="bool" />
+	<param name="p3_teleop/axis_linear_id" value="1" type="int" />
+ 	<param name="p3_teleop/axis_angular_id" value="0" type="int" />
+	<param name="p3_teleop/scale_adj_linear" value="0.8" type="double" />
+	<param name="p3_teleop/scale_adj_angular" value="0.1" type="double" />
+	<!-- invoke the sub-launcher -->
+	<include file="$(find p3_teleop)/launch/p3_teleop.launch" if="$(arg wiimote)" />
+
+	<node name="urg_node" pkg="urg_node" type="urg_node">
+		<param name="serial_port" type="string" value="/dev/ttyACM1" />
+		<param name="frame_id" type="string" value="laser" />
+		<remap from="scan" to="scan_org" />
+	</node>
+	<node pkg="laser_preprocess" type="uni_density" name="uni_density">
+		<param name="scan" value="/scan_org" type="string" />
+		<param name="uscan" value="/scan" type="string" />
+		<param name="cull_dist" value="0.15" type="double" />
+		<param name="mixed_dist" value="0.6" type="double" />
+	</node>
+
+	<node pkg="tf" type="static_transform_publisher" name="tf" args="-0.05 0 0 0 0 0 base_link laser 20" />
+    
+	<node pkg="ypspur_ros_bridge" type="RosYPSpur" name="robot" respawn="true" />
+	<param name="/RosYPSpur/vel"    value="0.5" type="double" /> 
+	<param name="/RosYPSpur/angvel" value="2.0" type="double" /> 
+	<param name="/RosYPSpur/acc"    value="1.0" type="double" /> 
+	<param name="/RosYPSpur/angacc" value="4.0" type="double" />
+	<param name="/RosYPSpur/hz"     value="20.0" type="double" />
+
+
+	<node name="amcl" pkg="amcl" type="amcl">
+		<param name="odom_alpha1" type="double" value="0.3" />
+		<param name="odom_alpha2" type="double" value="0.3" />
+		<param name="odom_alpha3" type="double" value="0.3" />
+		<param name="odom_alpha4" type="double" value="0.3" />
+		<param name="laser_max_beams" type="int" value="150" />
+		<param name="min_particles" type="int" value="100" />
+	</node>
+</launch>
+

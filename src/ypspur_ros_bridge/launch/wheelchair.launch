@@ -1,0 +1,117 @@
+<launch>
+	<!-- ARGUMENTS -->
+	<arg name="use_safety" default="true"/>
+	<arg name="use_localization" default="true"/>
+	<arg name="use_initial_pose" default="false"/>
+	<arg name="enable_control" default="true"/>
+
+	<rosparam param="footprint" ns="move_base/local_costmap">[[0.5,-0.45], [0.5,0.3], [0.15,0.37], [-0.15,0.37], [-0.75,0.35], [-0.75,-0.35], [-0.15,-0.37], [0.15,-0.37], [0.2,-0.45]]</rosparam>
+	<rosparam param="footprint" ns="move_base/global_costmap">[[0.5,-0.45], [0.5,0.3], [0.15,0.37], [-0.15,0.37], [-0.75,0.35], [-0.75,-0.35], [-0.15,-0.37], [0.15,-0.37], [0.2,-0.45]]</rosparam>
+	<rosparam param="footprint" ns="limiter">[[0.5,-0.45], [0.5,0.3], [0.15,0.37], [-0.15,0.37], [-0.75,0.35], [-0.75,-0.35], [-0.15,-0.37], [0.15,-0.37], [0.2,-0.45]]</rosparam>
+
+	<node pkg="tf" type="static_transform_publisher" name="laser_tf_bc_front" args="0.25 -0.07 0 0.0 0 3.14 base_link laser_front 100" />
+	<node pkg="tf" type="static_transform_publisher" name="laser_tf_bc_back" args="-0.45 0.16 0 3.12 0 0 base_link laser_back 100" />
+
+	<arg name="port" default="/dev/actuators/tfrog" />
+	<arg name="port_front_lrf" default="/dev/sensors/hokuyo_H1102797" />
+	<arg name="port_back_lrf" default="/dev/sensors/hokuyo_H1102788" />
+
+	<!-- FRONT LRF -->
+    <node name="front_urg_node" pkg="urg_node" type="urg_node">
+		<param name="serial_port" value="$(arg port_front_lrf)" type="string" />
+		<param name="frame_id" type="string" value="laser_front" />
+		<param name="calibrate_time" type="bool" value="true" />
+		<remap from="/scan" to="/scan_orig" />
+	</node>
+	<node name="cut1l" pkg="laser_preprocess" type="cut">
+		<param name="scan" value="/scan_orig" type="string" />
+		<param name="uscan" value="/laser_pre/_1l" type="string" />
+		<param name="start" value="0" type="int" />
+		<param name="end" value="115" type="int" />
+	</node>
+	<node name="cut2l" pkg="laser_preprocess" type="cut">
+		<param name="scan" value="/laser_pre/_1l" type="string" />
+		<param name="uscan" value="/laser_pre/_2l" type="string" />
+		<param name="start" value="155" type="int" />
+		<param name="end" value="225" type="int" />
+	</node>
+	<node name="cut3l" pkg="laser_preprocess" type="cut">
+		<param name="scan" value="/laser_pre/_2l" type="string" />
+		<param name="uscan" value="/laser_pre/_3l" type="string" />
+		<param name="start" value="975" type="int" />
+		<param name="end" value="1080" type="int" />
+	</node>
+	<node name="cut4l" pkg="laser_preprocess" type="cut">
+		<param name="scan" value="/laser_pre/_3l" type="string" />
+		<param name="uscan" value="/laser_pre/_4l" type="string" />
+		<param name="start" value="845" type="int" />
+		<param name="end" value="895" type="int" />
+	</node>
+	<node name="uni0l" pkg="laser_preprocess" type="uni_density">
+		<param name="scan" value="/laser_pre/_4l" type="string" />
+		<param name="uscan" value="/scan" type="string" />
+		<param name="cull_dist" value="0.1" type="double" />
+		<param name="mixed_dist" value="10" type="double" />
+	</node>
+
+	<!-- BACK LRF -->
+    <!--<node name="back_urg_node" pkg="urg_node" type="urg_node">
+		<param name="serial_port" value="$(arg port_back_lrf)" type="string" />
+		<param name="frame_id" type="string" value="laser_back" />
+	</node>-->
+
+	<!-- DRIVER -->
+	<node pkg="ypspur_ros_bridge" type="RosYPSpur" name="wheelchair" respawn="true">
+		<param name="port"   value="$(arg port)" type="string" /> 
+		<param name="vel"    value="2.0" type="double" /> 
+		<param name="angvel" value="1.3" type="double" /> 
+		<param name="acc"    value="0.77" type="double" /> 
+		<param name="angacc" value="1.2" type="double" /> 
+		<param name="hz"     value="50" type="double" /> 
+		<param name="origin_id" value="map" type="string" />
+		<remap from="/wheelchair/odom" to="/odom" />
+		<remap from="/wheelchair/cmd_vel" to="/aaaa" unless="$(arg enable_control)" />
+		
+		<param name="ad_enable0" value="true" type="bool" />
+		<param name="ad_gain0" value="0.000976563" type="double" />
+		<param name="ad_offset0" value="0.0" type="double" />
+		<param name="ad_enable7" value="true" type="bool" />
+		<param name="ad_gain7" value="0.041894531" type="double" />
+		<param name="ad_offset7" value="0.0" type="double" />
+	</node>
+
+	<!-- LOCALIZATION -->
+	<group if="$(arg use_localization)">
+		<group if="$(arg use_initial_pose)">
+			<rosparam param="initial_pose_x" ns="amcl">0</rosparam>
+			<rosparam param="initial_pose_y" ns="amcl">0</rosparam>
+			<rosparam param="initial_pose_a" ns="amcl">0</rosparam>
+		</group>
+		<node name="amcl" pkg="amcl" type="amcl">
+			<param name="odom_alpha1" type="double" value="5" />
+			<param name="odom_alpha2" type="double" value="5" />
+			<param name="odom_alpha3" type="double" value="2" />
+			<param name="odom_alpha4" type="double" value="2" />
+			<param name="laser_max_beams" type="int" value="200" />
+			<param name="min_particles" type="int" value="500" />
+			<param name="max_particles" type="int" value="800" />
+			<param name="update_min_d" type="double" value="0.05" />
+			<param name="update_min_a" type="double" value="0.08" />
+		</node>
+	</group>
+
+	<!-- LAUNCH SAFETY LIMITER -->
+	<include file="$(find safety_limiter)/launch/safety_limiter.launch" if="$(arg use_safety)">
+		<arg name="cmd_vel" value="/limiter/cmd_vel" />
+		<arg name="cloud" value="/limiter/cloud" />
+		<arg name="odom" value="/odom" />
+		<arg name="cmd_vel_out" value="/wheelchair/cmd_vel" /> 
+		<arg name="lin_acc" value="0.75" />
+		<arg name="ang_acc" value="1.0" />
+		<arg name="lin_margin" value="0.5" />
+		<arg name="ang_margin" value="0.1" />
+		<arg name="lin_esc_margin" value="0.15" />
+		<arg name="ang_esc_margin" value="0.3" />
+	</include>
+
+</launch>

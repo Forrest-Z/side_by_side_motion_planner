@@ -1,0 +1,4 @@
+ <launch>
+<include file="$(find velodyne_pointcloud)/launch/32e_points.launch" ns="/velodyne32"/>-
+<include file="$(find velodyne_pointcloud)/launch/VLP16_points.launch" ns="/velodyne16"/>
+ </launch>
