@@ -1,0 +1,144 @@
+<launch>
+  <!-- ARGUMENTS -->
+  <arg name="use_safety" default="false"/>
+  <arg name="use_localization" default="true"/>
+  <arg name="use_initial_pose" default="false"/>
+  <arg name="enable_control" default="true"/>
+  <arg name="use_log" default="false"/>
+  <arg name="unlink_sensor_link" default="false"/>
+  <arg name="use_simulator" default="false" />
+  <arg name="tf_prefix" default="" />
+  <arg name="remap_scan_topic" default="false"/>
+  <arg name="port" default="/dev/actuators/tfrog" />		
+  <arg name="top_port_lrf" default="192.168.150.10" />
+  <arg name="tough_port_lrf" default="192.168.0.10" />
+  <arg name="port_ip" default="10940" />
+
+  <arg name="use_frene_planner" default="false"/>
+  <arg name="catkin_ws_folder" default="crest_catkin"/>
+  <arg name="local_planner" default="frene_planner"/>
+
+  <!-- Trajectory Tracker -->
+  <arg name="use_trajectory_tracker" default="false"/>
+  <arg name="trajectory_tracker_type" default="trajectory_tracker"/>
+  <arg name="trajectory_path" default="/plan"/>
+
+  <arg name="max_vel" default="0.7"  />
+  <arg name="max_angvel" default="1.0"  />
+  <arg name="max_acc" default="1.0"  />
+  <arg name="max_angacc" default="1.0"  />
+  <arg name="rotate_ang" default="0.5"  />
+  <arg name="limit_vel_by_avel" default="true" />
+
+
+  <arg name="carLength"    default="1.2"	     />
+  <arg name="carWidth"    default="0.7"	     />
+
+  <rosparam param="footprint" ns="move_base/local_costmap">[[0.5, -0.3125], [0.5, 0.3125], [-0.42, 0.3125], [-0.42, -0.3125]]</rosparam>
+  <rosparam param="footprint" ns="move_base/global_costmap/">[[0.5, -0.3125], [0.5, 0.3125], [-0.42, 0.3125], [-0.42, -0.3125]]</rosparam>
+  <rosparam param="footprint" ns="limiter">[[0.5, -0.3125], [0.5, 0.3125], [-0.42, 0.3125], [-0.42, -0.3125]]</rosparam>
+
+  <!-- Velodyne TF + driver-->
+  <node name="world_to_map" pkg="tf" type="static_transform_publisher" args="0 0 0 0 0 0 world map 100" />
+  <node name="base_link_to_velodyne32" pkg="tf" type="static_transform_publisher" args="-0.361 0 1.67 0 0 0 $(arg v1)/base_link $(arg v1)/velodyne32 100" />
+  <node name="base_link_to_velodyne16" pkg="tf" type="static_transform_publisher" args="-0.29 -0.09 1.46 0.025 -0.04 -1.571 $(arg v1)/base_link $(arg v1)/velodyne16 100" />
+  <node name="base_link_to_pitched_corrected_velodyne16" pkg="tf" type="static_transform_publisher" args="0.94 0 0.85 0 0 0 $(arg v1)/base_link $(arg v1)/pitched_corrected_velodyne16 100" />
+  <node name="base_link_to_camera" pkg="tf" type="static_transform_publisher" args="0.96 0 0.956  -1.553 0 -1.5508 $(arg v1)/base_link $(arg v1)/camera 100" />
+  <node name="base_link_to_imu_link" pkg="tf" type="static_transform_publisher" args="0.05 0.15 0.25 0 0 0 $(arg v1)/base_link $(arg v1)/imu_link 100" />
+  
+  <include file="$(find velodyne_pointcloud)/launch/32e_points.launch" ns="$(arg v1)"/>
+  <group unless="$(arg use_simulator)">
+    <!-- DRIVER -->
+    <node pkg="rrc_controller" type="rrc_controller" name="rrc_controller" respawn="true">
+      <param name="port"   value="$(arg port)" type="string" /> 
+      <param name="vel"    value="1.0" type="double" /> 
+      <param name="angvel" value="1.0" type="double" /> 
+      <param name="acc"    value="0.7" type="double" /> 
+      <param name="angacc" value="1.5" type="double" /> 
+      <param name="hz" value="50.0" type="double" /> 
+      <param name="origin_id" value="" type="string" />
+      <remap from="/driver/odom" to="odom" />
+      <remap from="/ypspur_driver/cmd_vel" to="cmd_vel" />
+    </node>
+    
+    <!-- LOCALIZATION -->
+    <group if="$(arg use_localization)">
+      <group if="$(arg use_initial_pose)">
+	<rosparam param="initial_pose_x" ns="amcl">0</rosparam>
+	<rosparam param="initial_pose_y" ns="amcl">0</rosparam>
+	<rosparam param="initial_pose_a" ns="amcl">0</rosparam>
+      </group>
+      <node name="amcl" pkg="amcl" type="amcl">
+	<param name="odom_alpha1" type="double" value="2" />
+	<param name="odom_alpha2" type="double" value="2" />
+	<param name="odom_alpha3" type="double" value="2" />
+	<param name="odom_alpha4" type="double" value="2" />
+	<param name="laser_max_beams" type="int" value="200" />
+	<param name="update_min_d" type="double" value="0.1" />
+	<param name="update_min_a" type="double" value="0.2" />
+	<param name="use_map_topic" type="bool" value="true" />
+	<param name="laser_model_type" type="string" value="beam" />
+	<param name="min_particles" type="int" value="150" />
+	<param name="max_particles" type="int" value="300" />
+	<param name="laser_likelihood_max_dist" type="double" value="1.0" />
+      </node>
+    </group>
+  </group>
+
+ 
+  <node name="unify" pkg="laser_preprocess" type="uni_density">
+    <param name="scan" value="scan_orig" type="string" />
+    <param name="uscan" value="scan" type="string" />
+    <param name="cull_dist" value="0.05" type="double" />
+    <param name="mixed_dist" value="0.15" type="double" />
+  </node>
+  <node pkg="laser_filters" type="scan_to_scan_filter_chain" output="screen" name="laser_filter">
+    <remap from="scan" to="scan_orig0" />
+    <remap from="scan_filtered" to="scan_orig" />
+    <rosparam command="load" file="$(find ypspur_ros_bridge)/config/shadow_filter.yaml" />
+  </node>
+
+
+  <!-- LAUNCH SAFETY LIMITER -->
+  <include file="$(find safety_limiter)/launch/safety_limiter.launch" if="$(arg use_safety)">
+    <arg name="cmd_vel" value="limiter/cmd_vel" />
+    <arg name="cloud" value="limiter/cloud" />
+    <arg name="odom" value="odom" />
+    <arg name="cmd_vel_out" value="cmd_vel" /> 
+    <arg name="lin_acc" value="0.6" />
+    <arg name="ang_acc" value="0.7" />
+    <arg name="lin_margin" value="0.35" />
+    <arg name="ang_margin" value="0.1" />
+    <arg name="lin_esc_margin" value="0.15" />
+    <arg name="ang_esc_margin" value="0.3" />
+    <arg name="unify_scan" value="true" />
+  </include>
+
+  <node pkg="trajectory_tracker" type="trajectory_tracker" name="trajectory_tracker" output="log" >
+    <param name="cmd_vel" value="$(arg ns)/cmd_vel" type="string" />
+    <param name="path" value="path" type="string" />
+    <param name="path_step" value="1" type="int" />
+    <param name="frame_robot"    value="$(arg ns)/base_link"  />      
+    
+    
+    <param name="max_vel"    value="0.7"  />
+    <param name="max_steering" value="0.6"   />
+    <param name="max_acc"    value="0.3"   />
+    <param name="max_angacc" value="1.0"   />
+    <param name="rotate_ang" value="0.4"  />
+    <param name="max_angvel" value="0.6" type="double" />
+    
+    <param name="curv_forward" value="0.3" type="double" />
+    <param name="look_forward" value="0.2" type="double" />
+    <param name="k_dist" value="5.5" type="double" />
+    <param name="k_ang" value="5.0" type="double" />
+    <param name="k_avel" value="4" type="double" />
+    <param name="dist_lim" value="0.3" type="double" />
+    <param name="distance_angle_factor" value="0.5" type="double" />
+    <param name="goal_tolerance_dist" value="0.3" type="double" />
+    <param name="goal_tolerance_ang" value="0.15" type="double" />
+    <param name="allow_backward" value="false" type="bool" />
+    <param name="dist_stop" value="5.3" type="double" />
+    
+  </node>
+</launch>

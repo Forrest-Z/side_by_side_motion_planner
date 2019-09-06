@@ -1,0 +1,332 @@
+<launch>
+ <!-- ARGUMENTS -->
+ <arg name="ns" default="v2"/>
+  <arg name="partner" default="v1"/>
+  <arg name="initialPoseX" default="1.0"/>
+  <arg name="initialPoseY" default="1.0"/>
+  <arg name="initialPoseTheta" default="0.0"/>
+  <arg name="agents" default="2"/>
+  <arg name="id" default="2"/>
+  <arg name="use_simulator" default="true" />
+  <arg name="partner_host" default="hp"/>
+  <arg name="use_localization" default="true"/>
+  <arg name="sbs_path" default="sbs_path"/>
+  <arg name="right_side_path" default="true"/>
+  <arg name="distance_to_subgoal_ahead" default="2.1"/>
+  <arg name="adjust_path_speed_constant" default="3.1"/>
+
+
+  <arg name="publish_footprint_as_cloud" default="true"/>
+  <arg name="use_safety" default="true"/>
+  <arg name="use_collision" default="true"/>
+
+	<arg name="use_2d_localization" default="true"/>
+	<arg name="use_initial_pose" default="false"/>
+	<arg name="enable_control" default="true"/>
+	<arg name="use_log" default="false"/>
+	<arg name="unlink_sensor_link" default="false"/>
+	<arg name="tf_prefix" default="" /> 
+
+
+	<!-- Trajectory Tracker -->
+	<arg name="use_trajectory_tracker" default="true"/>
+	<arg name="trajectory_tracker_type" default="trajectory_tracker"/>
+	<arg name="trajectory_path" default="path"/>
+	<arg name="limit_vel_by_avel" default="true" />
+	<arg name="use_logged_velocity" default="true" />
+	<arg name="use_stop_tolerance_dist_at_end_of_path" default="false" />
+
+	<arg name="max_ang_vel" default="0.5"  />
+
+
+	     				
+	
+	<arg name="hz" value="20"/>
+
+	<arg name="use_3d_laser_2_scan" default="true"/>
+	<arg name="cloud_in" default="/velodyne16/velodyne_points"/>
+	<arg name="range_max" default="85"/>
+	<arg name="range_min" default="1.0"/>
+	<arg name="angle_min" default="-3.14"/>
+	<arg name="angle_max" default="3.14"/>
+	<arg name="min_height" default="0.10"/>
+	<arg name="max_height" default="0.40"/>
+
+	<arg name="amcl_scan_topic" default="/scan"/>       
+	<group ns="$(arg ns)">
+
+
+	<rosparam param="footprint" ns="footprint_2_cloud">[[-0.24, -0.26], [-0.24, 0.26], [0.88, 0.26], [0.88, -0.26]]</rosparam>
+	<rosparam param="footprint" ns="limiter">[[-0.24, -0.26], [-0.24, 0.26], [0.88, 0.26], [0.88, -0.26]]</rosparam>
+	
+	<node name="world_to_map" pkg="tf" type="static_transform_publisher" args="0 0 0 0 0 0 world map 100" />
+	<node name="base_link_to_velodyne16" pkg="tf" type="static_transform_publisher" args="-0.15 0 1.32 0 0 0 $(arg tf_prefix)/base_link $(arg tf_prefix)/velodyne16 100" />
+	<node name="base_link_to_left_utm" pkg="tf" type="static_transform_publisher" args="0.59 -0.14 0.52 0 0 0 $(arg tf_prefix)/base_link $(arg tf_prefix)/left_utm 100" />
+	<node name="base_link_to_right_utm" pkg="tf" type="static_transform_publisher" args="0.59 0.14 0.52 0 0 0 $(arg tf_prefix)/base_link $(arg tf_prefix)/right_utm 100" />
+
+
+<!--  For center of control in the center
+	<rosparam param="footprint" ns="limiter">[[0.0, -0.26], [0.0, 0.26], [-0.97, 0.26], [-0.97, -0.26]]</rosparam>
+
+	<node name="world_to_map" pkg="tf" type="static_transform_publisher" args="0 0 0 0 0 0 world map 100" />
+	<node name="base_link_to_velodyne16" pkg="tf" type="static_transform_publisher" args="-0.90 0 1.67 0 0 0 $(arg tf_prefix)/base_link $(arg tf_prefix)/velodyne16 100" />
+
+	<node name="base_link_to_left_utm" pkg="tf" type="static_transform_publisher" args="-0.17 -0.14 0.52 0 0 0 $(arg tf_prefix)/base_link $(arg tf_prefix)/left_utm 100" />
+	<node name="base_link_to_right_utm" pkg="tf" type="static_transform_publisher" args="-0.17 0.14 0.52 0 0 0 $(arg tf_prefix)/base_link $(arg tf_prefix)/right_utm 100" />	
+-->
+
+	<group unless="$(arg use_simulator)">
+		<!-- TOP LRF -->
+	   	<node name="top_urg_node" pkg="urg_node" type="urg_node" unless="$(arg use_log)">
+			<param name="ip_address" value="$(arg top_port_lrf)" type="string" />
+			<param name="ip_port" value="$(arg port_ip)" type="string" />
+			<param name="frame_id" type="string" value="$(arg tf_prefix)laser" />
+			<param name="angle_min" value="-2.0" />
+			<param name="angle_max" value="1.0" />
+			<param name="calibrate_time" type="bool" value="true" />
+			<remap from="/scan" to="/scan_orig0" />
+			<param name="publish_multiecho" type="bool" value="false" />
+		</node>
+
+		<!-- LRF 
+	   	<node name="urg_node" pkg="urg_node" type="urg_node" unless="$(arg use_log)">
+			<param name="serial_port" value="$(arg port_lrf)" type="string" />
+			<param name="frame_id" type="string" value="$(arg tf_prefix)laser" />
+			<param name="angle_min" value="-2.0" />
+			<param name="angle_max" value="2.0" />
+			<param name="calibrate_time" type="bool" value="true" />
+			<remap from="/scan" to="/scan_orig0" />
+		</node>
+		-->
+
+	<node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan_node" if="$(arg use_3d_laser_2_scan)">
+	      <remap from ="cloud_in" to= "$(arg cloud_in)" />
+	      <param name="range_max" value="$(arg range_max)" />
+	      <param name="range_min" value="$(arg range_min)" />
+	      <param name="angle_min" value="$(arg angle_min)" />
+	      <param name="angle_max" value="$(arg angle_max)" />
+	      <param name="min_height" value="$(arg min_height)" />
+	      <param name="max_height" value="$(arg max_height)" />
+	      <remap from="/velodyne16/scan" to="/scan" /> 
+	       	<!-- <remap from="/scan" to="/velodyne32/scan" /> -->
+	</node>
+
+
+
+
+	<node pkg="python_whill" type="whill_node.py" name="whill_node" respawn="true">
+	<remap from="whill_node/odom" to="/$(arg ns)/odom" />
+	<remap from="whill_node/cmd_vel" to="/$(arg ns)/cmd_vel" />
+	<param name="odom_id" type="string" value="$(arg tf_prefix)/odom" />
+	<param name="base_link_id" type="string" value="$(arg tf_prefix)/base_link" />	
+	 </node>
+	 
+<!-- 	-->
+
+
+		
+
+
+		<!-- LOCALIZATION -->
+		<group if="$(arg use_2d_localization)">
+			<group if="$(arg use_initial_pose)">
+				<rosparam param="initial_pose_x" ns="amcl">0</rosparam>
+				<rosparam param="initial_pose_y" ns="amcl">0</rosparam>
+				<rosparam param="initial_pose_a" ns="amcl">0</rosparam>
+			</group>
+
+
+
+
+
+			<node name="amcl" pkg="amcl" type="amcl">
+			       <remap from ="scan" to= "$(arg amcl_scan_topic)" />
+				<param name="odom_alpha1" type="double" value="2" />
+				<param name="odom_alpha2" type="double" value="2" />
+				<param name="odom_alpha3" type="double" value="2" />
+				<param name="odom_alpha4" type="double" value="2" />
+				<param name="laser_max_beams" type="int" value="1000" />
+				<param name="update_min_d" type="double" value="0.01" />
+				<param name="update_min_a" type="double" value="0.08" />
+				<param name="use_map_topic" type="bool" value="true" />
+				<param name="laser_model_type" type="string" value="beam" />
+				<param name="min_particles" type="int" value="150" />
+				<param name="max_particles" type="int" value="1000" />
+				<param name="laser_likelihood_max_dist" type="double" value="1.0" />
+				<remap from="/map" to="/$(arg ns)/map" /> 		
+			</node>
+		</group>
+	</group>
+
+	<group if="$(arg use_simulator)">
+		<group if="$(arg use_initial_pose)">
+			<rosparam param="delta_x" ns="amcl">0</rosparam>
+			<rosparam param="delta_y" ns="amcl">0</rosparam>
+			<rosparam param="delta_yaw" ns="amcl">0</rosparam>
+		</group>
+
+	<!-- LAUNCH SIMULATOR -->
+     <include file="$(find simple_simulator)/launch/simulator_wc.launch" if="$(arg use_simulator)">
+	<arg name="tf_prefix" value="$(arg ns)" />
+	<arg name="use_localization" value="$(arg use_2d_localization)" />
+	<arg name="delta_x" value="$(arg initialPoseX)" />
+	<arg name="delta_y" value="$(arg initialPoseY)" />
+	<arg name="delta_yaw" value="$(arg initialPoseTheta)" />
+      </include>
+
+<arg name="scan_topic" default="$(arg tf_prefix)/scan_orig0"/>
+      <!-- UTM SIMULATOR -->
+      <node pkg="simple_simulator" type="utm_simulator" name="simulator_hokuyo">
+      	<param name="frame_id" type="string" value="$(arg tf_prefix)/right_utm" />
+	<param name="map_topic" type="string" value="$(arg tf_prefix)/map" />
+	<remap from="~/scan" to="$(arg scan_topic)" />
+      </node>
+
+	</group>
+
+
+
+	<node pkg="laser_filters" type="scan_to_scan_filter_chain" output="screen" name="laser_filter">
+	    <remap from="scan" to="/$(arg ns)/scan_orig0" />
+      	    <remap from="scan_filtered" to="/$(arg ns)/scan_orig" />
+	    <rosparam command="load" file="$(find ypspur_ros_bridge)/config/shadow_filter.yaml" />
+	</node>
+
+
+   <!-- LAUNCH SAFETY LIMITER -->
+    <include file="$(find safety_limiter)/launch/safety_limiter.launch" >
+      <arg name="cmd_vel" value="/$(arg ns)/limiter/path_controller" />
+
+      <!-- <arg name="cloud" value="/$(arg ns)/cloud" />    -->
+
+       <arg name="cloud" value="/$(arg ns)/cloud" unless="$(arg publish_footprint_as_cloud)"/>
+       <arg name="cloud" value="/$(arg ns)/footprint_cloud" if="$(arg publish_footprint_as_cloud)"/>
+      
+      <arg name="odom" value="/$(arg ns)/odom" />
+      <arg name="cmd_vel_out" value="/$(arg ns)/cmd_vel_mux/path_controller" /> 
+      <arg name="lin_acc" value="1.2" />
+      <arg name="ang_acc" value="1.0" />
+      <arg name="lin_margin" value=".5" /> <!-- Original value = "0.15" -->
+      <arg name="ang_margin" value="0.1" /> <!-- Original value = 0.1 -->
+      <arg name="lin_esc_margin" value="0.15" /> <!-- Original value = 0.15 -->
+      <arg name="ang_esc_margin" value="0.3" />  <!-- Original value = 0.3 -->
+      <arg name="unify_scan" value="true" />
+      <arg name="tf_prefix" value="$(arg ns)" />
+      <arg name="use_safety" value="$(arg use_safety)"/>
+    </include>
+
+
+   <node  pkg="occmap" type="occMap_node" name="occmap" output="screen" if="$(arg use_collision)">
+      <param name="occMapTopicName" value="occmap"/>
+      <param name="occMapFrame" value="$(arg tf_prefix)/base_link" type="str"/>
+      <param name="viz" value="downsampled_points" type="str"/>
+      <param name="leafSize" value="0.1" type="double"/>
+      <param name="width" value="4" type="double"/>
+      <param name="dist" value="4" type="double"/>
+      <param name="pointcloud1_msg" value="true"/>
+
+      <param name="cloud" value="/$(arg ns)/cloud" unless="$(arg publish_footprint_as_cloud)"/>
+      <param name="cloud" value="/$(arg ns)/footprint_cloud" if="$(arg publish_footprint_as_cloud)"/>
+       
+    </node>
+
+
+
+
+
+
+    <node pkg="safety_limiter" type="footprint_2_cloud" name="footprint_2_cloud" output="screen"      if="$(arg publish_footprint_as_cloud)" >
+    		<param name="input_cloud" value="/$(arg ns)/cloud" type="string" />
+		<param name="output_cloud" value="/$(arg ns)/footprint_cloud" type="string" />
+		<param name="ego_frame" value="$(arg ns)/base_link" type="string" />
+		<param name="partner_frame" value="$(arg partner)/base_link" type="string" />
+	</node>
+
+
+	<group if="$(arg use_trajectory_tracker)">
+	<node pkg="trajectory_tracker" type="$(arg trajectory_tracker_type)" name="trajectory_tracker" output="screen">
+
+	<param name="cmd_vel" value="/$(arg ns)/cmd_vel_mux/path_controller" type="string"  unless="$(arg use_safety)" />
+	<param name="cmd_vel" value="/$(arg ns)/limiter/path_controller" type="string"  if="$(arg use_safety)" />
+	
+	 <param name="path" value="$(arg trajectory_path)" type="string" />
+	 <param name="path_step" value="1" type="int" />
+	 <param name="frame_robot"    value="$(arg tf_prefix)/base_link"  />   
+
+		<param name="max_vel"    value="0.9"  />
+		<param name="max_acc"    value="0.5"   />
+		<param name="max_angacc" value="1.0"   />
+		<param name="max_angvel" value="0.4" type="double" />
+
+	
+
+		<param name="curv_forward" value="0.8" type="double" />
+		<param name="look_forward" value="0.8" type="double" />
+		<param name="k_dist" value="6.0" type="double" />
+		<param name="k_ang" value="5.0" type="double" />
+		<param name="k_avel" value="4.0" type="double" />
+		<param name="dist_lim" value="0.3" type="double" />
+		<param name="distance_angle_factor" value="0.5" type="double" />
+		<param name="goal_tolerance_dist" value="0.3" type="double" />
+		<param name="goal_tolerance_ang" value="0.15" type="double" />
+		<param name="allow_backward" value="false" type="bool" />
+		<param name="dist_stop" value="2.3" type="double" />
+		<param name="stop_tolerance_dist" value="0.1" type="double" />
+
+		<param name="limit_vel_by_avel"   value="$(arg limit_vel_by_avel)" />
+		<param name="use_logged_velocity" value="$(arg use_logged_velocity)" />
+		<param name="use_stop_tolerance_dist_at_end_of_path" value="$(arg use_stop_tolerance_dist_at_end_of_path)" />
+		
+
+
+		<param name="hz" value="$(arg hz)"/>
+
+	</node>
+	</group>
+
+
+
+     <node pkg="trajectory_tracker" type="trajectory_server" name="trajectory_server" output="screen" >
+          <param name="path_viz" value="/$(arg ns)/sbs_path_viz"/>
+	  <param name="path" value="/$(arg ns)/sbs_path"/>
+     </node>
+
+
+    <!-- SIDE BY SIDE PATH PLANNER -->
+      <node pkg="sbs_motion" type="sbs_agent_with_path" name ="agent" >
+      <param name="hz" value="20"/>
+      <param name="sbs_path" type="string" value="$(arg ns)/sbs_path" />
+      <param name="partner" value="$(arg partner)"/>
+      <param name="agents" value="$(arg agents)"/>
+      <param name="id" value="$(arg id)"/>
+      <param name="initialPoseX" value="$(arg initialPoseX)"/>
+      <param name="initialPoseY" value="$(arg initialPoseY)"/>
+      <param name="right_side_path" value="$(arg right_side_path)"/>
+      <param name="distance_to_subgoal_ahead" value="$(arg distance_to_subgoal_ahead)"/>
+      <param name="adjust_path_speed_constant" value="$(arg adjust_path_speed_constant)"/>
+
+      <param name="length" value="0.5"/>
+      <param name="width" value="0.5"/>
+      <param name="use_collision" value="$(arg use_collision)" />
+      
+
+
+      <rosparam command="load" file="$(find sbs_motion)/config/util.yaml" />
+      <rosparam command="load" file="$(find sbs_motion)/config/frene.yaml" />
+    </node>
+
+    
+    <node pkg="unit_converter" type="tfToPoseStamped" name="tfToPoseStamped">
+      <param name="tf2TopicName" type="string" value="$(arg tf_prefix)/base_link" />
+      <param name="tf1TopicName" type="string" value="map" />
+      <param name="poseStampedTopicName" type="string" value="/$(arg ns)/filtered_ndt_current_pose" />
+      <param name="samplingTimeHz" value="$(arg hz)"/>
+    </node>
+
+ </group>
+
+
+</launch>
+
+
+

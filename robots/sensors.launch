@@ -1,0 +1,46 @@
+<launch>	
+	<arg name="split_velodyne" default="false"/>
+
+
+	<!-- velodyne 32 -->
+	<include file="$(find velodyne_pointcloud)/launch/32e_points.launch" >
+		 <arg name="split_velodyne" value="$(arg split_velodyne)"/>
+	 </include>
+	<group ns="32e" if="$(arg split_velodyne)" >
+		<include file="$(find velodyne_tools)/launch/builder.launch">
+			 <arg name="publishTopic" value="/velodyne_points"/>
+			 <arg name="subTopic" value="/velodyne32/velodyne_points"/>
+			 <arg name="velodyne_model" value="32"/>
+		</include>
+ 	</group>
+
+	<!-- velodyne 16 -->
+	<include file="$(find velodyne_pointcloud)/launch/VLP16_points.launch">
+		 <arg name="split_velodyne" value="$(arg split_velodyne)"/>
+	 </include>
+	<group ns="VLP16" if="$(arg split_velodyne)">
+		<include file="$(find velodyne_tools)/launch/builder.launch">
+			 <arg name="publishTopic" value="/velodyne16_points"/>
+			 <arg name="subTopic" value="/velodyne16/velodyne_points"/>
+			 <arg name="velodyne_model" value="16"/>
+		</include>
+ 	</group>
+	<!-- imu 
+	<include file="$(find xsens_driver)/launch/xsens.launch"/> -->
+
+	<!-- camera -->
+	<arg name="calibrated" default="1" />
+	<arg name="camera_serial" default="13440023" />
+	<group ns="camera" >
+		<node pkg="nodelet" type="nodelet" name="camera_nodelet_manager" args="manager" respawn="true" />
+		<node pkg="nodelet" type="nodelet" name="camera_nodelet" args="load pointgrey_camera_driver/PointGreyCameraNodelet camera_nodelet_manager" >
+			<param name="frame_id" value="camera" />
+			<param name="serial" value="13440023" />
+			<param name="frame_rate" value="25" />
+			<param name="camera_info_url" if="$(arg calibrated)" value="file://$(env HOME)/.ros/camera_info/$(arg camera_serial).yaml" />
+		</node >
+		<node pkg="nodelet" type="nodelet" name="image_proc_debayer" args="load image_proc/debayer camera_nodelet_manager" >
+		</node >
+	</group >
+
+</launch>

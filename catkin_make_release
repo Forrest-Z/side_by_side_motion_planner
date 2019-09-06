@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+#set -e
+
+#if [[ -d build ]]; then
+#    rm -rf build
+#fi
+
+#if [[ -d devel ]]; then
+#    rm -rf devel
+#fi
+
+#if [[ ! -f depends/src/velodyne/velodyne/.git ]]; then
+#    (cd .. && git submodule init && git submodule update)
+#fi
+
+#if [[ ! -e depends/devel/setup.bash ]]; then
+#    cwd=$PWD
+#   cd depends/src
+#   if [[ ! -e CMakeLists.txt ]]; then
+#       catkin_init_workspace
+#    fi
+#
+#    (cd .. && catkin_make $@)
+#    cd $cwd
+#fi
+#source depends/devel/setup.bash
+
+#catkin_make clean
+#catkin_make
+#source devel/setup.bash
+
+#catkin_make clean
+#catkin_make -DCMAKE_BUILD_TYPE=Release -j8 -i
+catkin_make -DCMAKE_BUILD_TYPE=Release -j32 -i
+
+#catkin_make -DCMAKE_BUILD_TYPE=Release  -i
+source devel/setup.bash
