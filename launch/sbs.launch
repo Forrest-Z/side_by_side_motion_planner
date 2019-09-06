@@ -1,0 +1,64 @@
+<launch>
+ <!-- ARGUMENTS -->
+ <arg name="ns" default="v2"/>
+ <arg name="tf_prefix" default="v2" />	
+
+  <arg name="partner" default="v1"/>
+  <arg name="initialPoseX" default="1.0"/>
+  <arg name="initialPoseY" default="1.0"/>
+  <arg name="initialPoseTheta" default="0.0"/>
+  <arg name="agents" default="2"/>
+  <arg name="id" default="2"/>
+  <arg name="use_simulator" default="true" />
+  <arg name="partner_host" default="hp"/>
+
+	<arg name="use_initial_pose" default="false"/>
+	<arg name="use_2d_localization" default="true"/>
+
+ <group ns="$(arg ns)">
+
+
+
+	<group if="$(arg use_simulator)">
+		<group if="$(arg use_initial_pose)">
+			<rosparam param="delta_x" ns="amcl">0</rosparam>
+			<rosparam param="delta_y" ns="amcl">0</rosparam>
+			<rosparam param="delta_yaw" ns="amcl">0</rosparam>
+		</group>
+
+	<!-- LAUNCH SIMULATOR -->
+     <include file="$(find simple_simulator)/launch/simulator_wc.launch" if="$(arg use_simulator)">
+	<arg name="tf_prefix" value="$(arg ns)" />
+	<arg name="use_localization" value="$(arg use_2d_localization)" />
+	<arg name="delta_x" value="$(arg initialPoseX)" />
+	<arg name="delta_y" value="$(arg initialPoseY)" />
+	<arg name="delta_yaw" value="$(arg initialPoseTheta)" />
+      </include>
+      
+	</group>
+	
+    <!-- SIDE BY SIDE PATH PLANNER -->
+    <node pkg="sbs_motion" type="sbs_agent" name ="agent" output="screen" >
+      <param name="hz" value="50"/>
+      <param name="partner" value="$(arg partner)"/>
+      <param name="agents" value="$(arg agents)"/>
+      <param name="id" value="$(arg id)"/>		
+      <param name="initialPoseX" value="$(arg initialPoseX)"/>
+      <param name="initialPoseY" value="$(arg initialPoseY)"/>
+      <param name="length" value="0.4"/>
+      <param name="width" value="0.5"/>
+      <rosparam command="load" file="$(find sbs_motion)/config/util.yaml" />
+      <rosparam command="load" file="$(find sbs_motion)/config/frene.yaml" />
+    </node>
+
+
+
+    <node pkg="unit_converter" type="tfToPoseStamped" name="tfToPoseStamped">
+      <param name="tf2TopicName" type="string" value="$(arg tf_prefix)/base_link" />
+      <param name="tf1TopicName" type="string" value="map" />
+      <param name="poseStampedTopicName" type="string" value="/$(arg ns)/filtered_ndt_current_pose" />
+      <param name="samplingTimeHz" value="50"/>
+    </node>
+
+ </group>
+</launch>

@@ -1,0 +1,1 @@
+rostopic pub /initialpose geometry_msgs/PoseWithCovarianceStamped '{header: { stamp: now, frame_id: "map"}, pose : { pose: {position: {x: -4.35, y: 10.73, z: 0.0}, orientation: {x: 0.0, y: 0.0, z: 0.999961928906058, w: 0.0087}}}}'

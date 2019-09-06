@@ -1,0 +1,80 @@
+<launch>
+  <!-- ARGUMENTS -->
+  <arg name="ns" default="v1"/>
+  <arg name="partner" default="v2"/>
+  <arg name="initialPoseX" default="1.0"/>
+  <arg name="initialPoseY" default="1.0"/>
+  <arg name="initialPoseTheta" default="0.0"/>
+  <arg name="agents" default="2"/>
+  <arg name="id" default="1"/>
+  <arg name="use_simulator" default="true" />
+  <arg name="use_localization" default="true"/>
+  <arg name="partner_host" default="hp"/>
+
+  <arg name="use_safety" default="true"/>
+  <arg name="use_collision" default="false"/>
+  <arg name="use_initial_pose" default="false"/>
+  <arg name="enable_control" default="true"/>
+  <arg name="use_log" default="false"/>
+  <arg name="unlink_sensor_link" default="false"/>
+  <arg name="tf_prefix" default="" />
+  <arg name="remap_scan_topic" default="false"/>
+  <arg name="port" default="/dev/actuators/tfrog" />
+  <arg name="port_lrf" default="/dev/sensors/hokuyo_H0710354" />
+  <arg name="catkin_ws_folder" default="/home/$(env USER)/Documents/sbs"/>
+
+
+  <arg name="save_data" default="false"/>
+  <arg name="use_mpc" default="false"/>
+
+
+  <arg name="localizer" default="suzu_control"/>
+
+
+  <!-- Trajectory Tracker -->
+  <arg name="use_trajectory_tracker" default="true"/>
+  <arg name="trajectory_tracker_type" default="trajectory_tracker"/>
+  <arg name="trajectory_path" default="path"/>
+  <arg name="max_vel" default="0.6"  />
+  <arg name="max_angvel" default="0.5"  />
+  <arg name="max_acc" default="0.5"  />
+  <arg name="max_angacc" default="0.5"  />
+  <arg name="rotate_ang" default="0.5"  />
+  <arg name="limit_vel_by_avel" default="true" />
+
+  <group ns="$(arg ns)">
+
+
+    <rosparam param="footprint" ns="move_base/local_costmap">[[0.30, -0.30], [0.30, 0.30], [-0.30, 0.30], [-0.30, -0.30]]</rosparam>
+    <rosparam param="footprint" ns="move_base/global_costmap/">[[0.30, -0.30], [0.30, 0.30], [-0.30, 0.30], [-0.30, -0.30]]</rosparam>
+    <rosparam param="footprint" ns="limiter">[[0.20, -0.25], [0.20, 0.25], [-0.50, 0.25], [-0.50, -0.25]]</rosparam>
+
+
+    <node pkg="tf" type="static_transform_publisher" name="tf" args="0.03 0 0.24 0 0 0 $(arg tf_prefix)/base_link $(arg tf_prefix)/laser 20" />
+    <node pkg="tf" type="static_transform_publisher" name="slink" args="0 0 0 0 0 0 $(arg tf_prefix)/base_link $(arg tf_prefix)/sensor_link 100" unless="$(arg unlink_sensor_link)" />
+
+
+
+
+
+
+    <!-- SIDE BY SIDE PATH PLANNER -->
+    <node pkg="sbs_motion" type="sbs_agent" name ="agent" output="screen" >
+      <param name="hz" value="50"/>
+      <param name="partner" value="$(arg partner)"/>
+      <param name="agents" value="$(arg agents)"/>
+      <param name="id" value="$(arg id)"/>		
+      <param name="initialPoseX" value="$(arg initialPoseX)"/>
+      <param name="initialPoseY" value="$(arg initialPoseY)"/>
+      <param name="length" value="0.4"/>
+      <param name="width" value="0.5"/>
+      <rosparam command="load" file="$(find sbs_motion)/config/util.yaml" />
+      <rosparam command="load" file="$(find sbs_motion)/config/frene.yaml" />
+    </node>
+
+    
+
+
+
+  </group>
+</launch>

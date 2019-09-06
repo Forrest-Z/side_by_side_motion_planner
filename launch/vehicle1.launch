@@ -1,0 +1,76 @@
+<launch>
+  <arg name="map" default="false"/>
+  <arg name="robot" default="junkbot"/>
+  <arg name="catkin_ws_folder" default="/home/$(env USER)/Documents/sbs"/>
+  <arg name="map_file" default="$(arg catkin_ws_folder)/environments/coi_6th_floor/coi_6th_floor.yaml" />
+  <arg name="v1" default="/v1"/>
+  <arg name="v2" default="/v2"/> 
+  <arg name="use_simulator" default="true"/>
+  <arg name="use_collision" default="true"/>
+  <arg name="use_safety" default="false"/>
+  <arg name="use_joystick" default="true"/>
+  <arg name="joystick" default="nav" />
+  <arg name="max_linear_vel"  default="10.0"/>
+  <arg name="max_angular_vel" default="0.5"/>
+  <arg name="partner_host" default="canvas"/>
+
+  <!-- map server-->
+  <node respawn="true" name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)" ns="$(arg v1)"/>
+  <node pkg="tf" type="static_transform_publisher" name="link1_broadcaster" args="0 0 0 0 0 0  laser map 100" />
+  
+  <!-- subgoal server-->
+  <node pkg="sbs_motion" type="subgoals" name ="subgoals" ns ="$(arg v1)">
+    <remap from="/move_base_simple/goal" to="move_base_simple/goal"/>
+  </node>
+  <!-- side by side motion agent-->
+  <include file="$(arg catkin_ws_folder)/robots/$(arg robot).launch">
+    <arg name="ns" value="$(arg v1)"/>
+    <arg name="partner" value="$(arg v2)"/>
+    <arg name="id" value="1"/>
+    <arg name="initialPoseX" value="15.474775"/>
+    <arg name="initialPoseY" value="10.960026"/>
+    <arg name="initialPoseTheta" value="-0.521"/>
+    <arg name="use_simulator" value="$(arg use_simulator)"/>
+    <arg name="use_safety" value="$(arg use_safety)"/>
+    <arg name="use_collision" value="$(arg use_collision)"/>
+    <arg name="tf_prefix" value="$(arg v1)" />
+    <arg name="agents" value="2"/>
+    <arg name="partner_host" value="$(arg partner_host)"/>
+  </include>
+
+  <!--RVIZ visualisation-->
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find sbs_motion)/sbs.rviz" ns="$(arg v1)"> 
+  	<remap from="/initialpose" to="initialpose"/>
+  </node>
+
+  <!-- VELOCITY COMMAND MULTIPLEXER -->
+  <node pkg="nodelet" type="nodelet" name="cmd_vel_mux" args="load yocs_cmd_vel_mux/CmdVelMuxNodelet base_nodelet_manager" ns="$(arg v1)">
+    <param name="yaml_cfg_file" value="$(find ypspur_ros_bridge)/config/cmd_mux_config.yaml" />
+    <remap from="cmd_vel_mux/output" to="/$(arg v1)/limiter/cmd_vel" if="$(arg use_safety)" />
+    <remap from="output" to="/$(arg v1)/limiter/cmd_vel" if="$(arg use_safety)" />
+    <remap from="cmd_vel_mux/output" to="/$(arg v1)/cmd_vel" unless="$(arg use_safety)" />
+    <remap from="output" to="/$(arg v1)/cmd_vel" unless="$(arg use_safety)" />
+  </node>
+
+  <!-- JOYSTICK -->
+  <include file="$(find joystick_teleop)/launch/$(arg joystick).launch" if="$(arg use_joystick)" ns="$(arg v1)">
+
+    <arg name="max_linear_vel" value="$(arg max_linear_vel)"  />
+    <arg name="max_angular_vel" value="0.5" />
+    <arg name="cmd_vel_out" value="$(arg v1)/cmd_vel_mux/joystick_controller" />
+  </include>
+
+  <node pkg="nodelet" type="nodelet" name="base_nodelet_manager" args="manager" ns="$(arg v1)"/>
+
+  <node pkg="udp" type="odom_in_map_client.py" name="udp_odom_client" ns="$(arg v1)">
+    <param name="hostname" value="$(arg partner_host)"/>
+    <param name="odom_topic" value="$(arg v2)/odom"/>
+    <param name="pose_topic" value="$(arg v2)/filtered_ndt_current_pose"/>
+  </node>
+  
+  <node pkg="udp" type="odom_in_map_server.py" name="udp_odom_server" ns="$(arg v1)"/>
+  <node pkg="udp" type="points_server.py" name="points_server" ns="$(arg v1)"/>
+  <node pkg="udp" type="points_client.py" name="points_client" ns="$(arg v1)">
+    <param name="hostname" value="$(arg partner_host)"/>
+  </node>
+</launch>

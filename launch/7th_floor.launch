@@ -1,0 +1,171 @@
+<launch>
+  <arg name="map" default="false"/>
+  <arg name="robot1" default="whill_01"/>
+  <arg name="robot2" default="whill_01"/>
+  <arg name="catkin_ws_folder" default="/home/$(env USER)/Dropbox/Research/whill_side_by_side"/>
+  <arg name="map_file" default="$(arg catkin_ws_folder)/environments/velodyne_coi_7th_floor/free.yaml" />
+  <arg name="v1" default="/v1"/>
+  <arg name="v2" default="/v2"/> 
+  <arg name="use_simulator" default="true"/>
+  <arg name="use_safety" default="false"/>
+  <arg name="use_collision" default="false"/>
+  <arg name="publish_footprint_as_cloud" default="true"/>
+  <arg name="max_linear_vel"  default="10.0"/>
+  <arg name="max_angular_vel" default="0.5"/>
+
+  <arg name="hz" value="50"/>
+
+ <!-- Joystick -->
+ <arg name="use_joystick" default="true" />
+ <arg name="joystick" default="nav" />
+
+
+  <!-- map server-->
+  <node respawn="true" name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)" ns="$(arg v1)"/>
+  <node respawn="true" name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)" ns="$(arg v2)"/>
+  <node pkg="tf" type="static_transform_publisher" name="link1_broadcaster" args="0 0 0 0 0 0  laser map 100" />
+
+  <!-- subgoal server-->
+  <node pkg="sbs_motion" type="subgoals" name ="subgoals">
+    <remap to="/shareGoals" from="/sendGoals"/>
+  </node>
+
+  <!-- side by side motion agent 1-->
+  <include file="$(arg catkin_ws_folder)/robots/$(arg robot1).launch">
+    <arg name="ns" value="$(arg v1)"/>
+    <arg name="partner" value="$(arg v2)"/>
+    <arg name="id" value="1"/>
+    <arg name="initialPoseX" value="12.42"/>
+    <arg name="initialPoseY" value="0.77"/>
+    <arg name="initialPoseTheta" value="1.55"/>
+    <arg name="tf_prefix" value="$(arg v1)" />
+    <arg name="use_simulator" value="$(arg use_simulator)"/>
+    <arg name="use_safety" value="$(arg use_safety)"/>
+    <arg name="use_collision" value="$(arg use_collision)"/>
+    <arg name="publish_footprint_as_cloud" value="$(arg publish_footprint_as_cloud)"/>
+    <arg name="sbs_path" value="/v1/trajectory_server/sbs_path"/>
+    <arg name="right_side_path" value="true"/>
+    <arg name="distance_to_subgoal_ahead" value="2.1"/>
+    <arg name="adjust_path_speed_constant" value="3.1"/>
+
+    <arg name="ego_frame" value="/v1/base_link" if="$(eval v1 == 'v1')" />
+    <arg name="ego_frame" value="/v2/base_link" if="$(eval v1 == 'v2')" />
+
+</include>
+
+   <!-- side by side motion agent -->
+  <include file="$(arg catkin_ws_folder)/robots/$(arg robot2).launch">
+    <arg name="ns" value="$(arg v2)"/>
+    <arg name="partner" value="$(arg v1)"/>
+    <arg name="id" value="2"/>
+    <arg name="initialPoseX" value="11.5"/>
+    <arg name="initialPoseY" value="0.95"/>
+    <arg name="initialPoseTheta" value="1.55"/>
+    <arg name="tf_prefix" value="$(arg v2)" />
+    <arg name="use_simulator" value="$(arg use_simulator)"/>
+    <arg name="use_safety" value="$(arg use_safety)"/>
+    <arg name="use_collision" value="$(arg use_collision)"/>
+    <arg name="publish_footprint_as_cloud" value="$(arg publish_footprint_as_cloud)"/>
+    <arg name="sbs_path" value="/v2/trajectory_server/sbs_path"/>
+    <arg name="right_side_path" value="false"/>
+    <arg name="distance_to_subgoal_ahead" value="2.1"/>
+    <arg name="adjust_path_speed_constant" value="3.1"/>
+
+  </include>
+
+
+
+
+  <!--RVIZ visualisation   -->
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find sbs_motion)/sbs.rviz"/>
+
+
+
+
+ 
+
+
+
+<!--
+
+  <node pkg="nodelet" type="nodelet" name="base_nodelet_manager" args="manager" ns="$(arg v2)"/>
+ <node pkg="nodelet" type="nodelet" name="cmd_vel_mux" args="load yocs_cmd_vel_mux/CmdVelMuxNodelet base_nodelet_manager" ns="$(arg v1)" >
+    <param name="yaml_cfg_file" value="$(arg catkin_ws_folder)/launch/cmd_mux_config.yaml" />
+
+    <remap from="cmd_vel_mux/output" to="/$(arg v1)/cmd_vel"  />
+    <remap from="output" to="$(arg v1)/cmd_vel" />
+    
+    <param name="yaml_cfg_file" value="$(find ypspur_ros_bridge)/config/cmd_mux_config.yaml" />
+    <remap from="cmd_vel_mux/output" to="$(arg v1)/output" />
+    <remap from="cmd_vel_mux/output" to="$(arg v1)/output" if="$(arg use_safety)" />
+    <remap from="output" to="$(arg v1)/cmd_vel" if="$(arg use_safety)" />
+
+</node>
+-->
+
+
+
+
+
+<group ns="$(arg v1)">
+       <node pkg="nodelet" type="nodelet" name="base_nodelet_manager" args="manager"  />
+       <node pkg="nodelet" type="nodelet" name="cmd_vel_mux" args="load yocs_cmd_vel_mux/CmdVelMuxNodelet base_nodelet_manager" >
+       	     <param name="yaml_cfg_file" value="$(arg catkin_ws_folder)/launch/cmd_mux_config.yaml" />
+      	     <remap from="cmd_vel_mux/output" to="/$(arg v1)/cmd_vel"  />
+	</node>
+
+	<!-- JOYSTICK -->
+	<include file="$(find joystick_teleop)/launch/$(arg joystick).launch" if="$(arg use_joystick)">
+		<arg name="max_linear_vel" value="1.0"  />
+		<arg name="max_angular_vel" value="0.5" />
+		<arg name="cmd_vel_out" value="$(arg v1)/cmd_vel_mux/joystick_controller" />
+	</include>
+</group>
+
+
+ <group ns="$(arg v2)">
+ 	<node pkg="nodelet" type="nodelet" name="base_nodelet_manager" args="manager"  />
+	<node pkg="nodelet" type="nodelet" name="cmd_vel_mux" args="load yocs_cmd_vel_mux/CmdVelMuxNodelet base_nodelet_manager">
+	      <param name="yaml_cfg_file" value="$(arg catkin_ws_folder)/launch/cmd_mux_config.yaml" />
+	      <remap from="cmd_vel_mux/output" to="/$(arg v2)/cmd_vel"  />
+	 </node>
+
+	<!-- JOYSTICK -->
+	<include file="$(find joystick_teleop)/launch/$(arg joystick).launch" if="$(arg use_joystick)">
+		<arg name="max_linear_vel" value="1.0"  />
+		<arg name="max_angular_vel" value="0.5" />
+		<arg name="cmd_vel_out" value="$(arg v1)/cmd_vel_mux/joystick_controller" />
+	</include>
+
+</group>
+
+
+
+</launch>
+
+
+
+
+
+<!--
+
+
+  <node pkg="nodelet" type="nodelet" name="base_nodelet_manager" args="manager" ns="$(arg v1)"/>
+
+
+]	<node pkg="nodelet" type="nodelet" name="cmd_vel_mux" args="load yocs_cmd_vel_mux/CmdVelMuxNodelet base_nodelet_manager" >
+    		<param name="yaml_cfg_file" value="$(find ypspur_ros_bridge)/config/cmd_mux_config.yaml" />
+    		<remap from="cmd_vel_mux/output" to="/limiter/cmd_vel" if="$(arg use_safety)" />
+	    	<remap from="output" to="/limiter/cmd_vel" if="$(arg use_safety)" />
+
+	    	<remap from="cmd_vel_mux/output" to="/cmd_vel" unless="$(arg use_safety)" />
+		<remap from="output" to="/cmd_vel" unless="$(arg use_safety)" />
+
+
+    	</node>
+
+
+
+    <remap from="cmd_vel_mux/output" to="/$(arg v1)/output"  />
+    <remap from="output" to="$(arg v1)/cmd_vel" />
+-->

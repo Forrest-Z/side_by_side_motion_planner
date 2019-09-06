@@ -1,0 +1,23 @@
+<launch>
+ 	<arg name="ns" default="v1"/>
+	<arg name="publish_footprint_as_cloud" default="true"/>
+
+
+	<group ns="$(arg ns)">
+
+	<rosparam param="footprint" ns="footprint_2_cloud">[[-0.24, -0.26], [-0.24, 0.26], [0.88, 0.26], [0.88, -0.26]]</rosparam>
+	<rosparam param="footprint" ns="limiter">[[-0.24, -0.26], [-0.24, 0.26], [0.88, 0.26], [0.88, -0.26]]</rosparam>
+	
+
+    <node pkg="safety_limiter" type="footprint_2_cloud" name="footprint_2_cloud" output="screen"      if="$(arg publish_footprint_as_cloud)" >
+		<param name="input_cloud" value="/$(arg ns)/cloud" type="string" />
+		<param name="output_cloud" value="/$(arg ns)/footprint_cloud" type="string" />
+	</node>
+
+
+
+</group>
+
+
+</launch>
+
